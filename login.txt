@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เข้าสู่ระบบ - ระบบแจ้งซ่อมออนไลน์</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .login-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+        }
+
+        .login-icon i {
+            color: white;
+            font-size: 2rem;
+        }
+
+        .login-title {
+            color: #4f46e5;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .login-subtitle {
+            color: #6b7280;
+            font-size: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            background: #f8fafc;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #4f46e5;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+        }
+
+        .login-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            padding: 1.2rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(79, 70, 229, 0.3);
+        }
+
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .back-btn {
+            width: 100%;
+            background: #6b7280;
+            color: white;
+            padding: 1rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .back-btn:hover {
+            background: #4b5563;
+            transform: translateY(-1px);
+        }
+
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            display: none;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 500;
+        }
+
+        .alert.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .alert.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+
+        .alert.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #93c5fd;
+        }
+
+        .loading {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin: 1rem 0;
+            color: #4f46e5;
+            font-weight: 500;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e5e7eb;
+            border-top: 2px solid #4f46e5;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .security-info {
+            background: #f0f9ff;
+            border: 2px solid #0ea5e9;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .security-info h3 {
+            color: #0369a1;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .security-info ul {
+            color: #0369a1;
+            font-size: 0.9rem;
+            margin: 0;
+            padding-left: 1.5rem;
+        }
+
+        .security-info li {
+            margin-bottom: 0.5rem;
+        }
+
+        .security-tips {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .security-tips h4 {
+            color: #92400e;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .security-tips p {
+            color: #92400e;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .forgot-password {
+            text-align: center;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .forgot-password a {
+            color: #4f46e5;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .forgot-password a:hover {
+            color: #3730a3;
+            text-decoration: underline;
+        }
+
+        @media (max-width: 550px) {
+    .login-container {
+        padding: 2rem 1.5rem; /* [แก้ไข] ลด padding ด้านข้างบนจอมือถือ */
+    }
+
+    .login-title {
+        font-size: 1.8rem; /* [แก้ไข] ลดขนาดฟอนต์หัวข้อเล็กน้อย */
+    }
+}
+        
+        @media (max-width: 768px) {
+    .nav-container {
+        padding: 0 0.5rem;
+    }
+
+    .nav-buttons {
+        gap: 0.2rem;
+    }
+
+    .nav-btn {
+        padding: 0.55rem 0.8rem;
+        font-size: 0.96rem;
+        border-radius: 28px;
+        min-width: 90px;
+    }
+
+    .main-container {
+        padding: 70px 0.3rem 1.5rem;
+    }
+
+    .hero-title {
+        font-size: 1.35rem;
+        line-height: 1.2;
+    }
+
+    .hero-subtitle {
+        font-size: 0.95rem;
+    }
+
+    .form-container {
+        padding: 1.1rem 0.3rem;
+        border-radius: 13px;
+        margin-bottom: 2rem;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 0.7rem;
+    }
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+        padding: 0.7rem;
+        font-size: 0.97rem;
+        border-radius: 9px;
+    }
+}
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <div class="login-icon">
+                <img src="https://img2.pic.in.th/pic/SDULP-FIX52933b8334b3dd59.png" alt="โลโก้ระบบแจ้งซ่อม" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">
+            </div>
+            <h1 class="login-title">เข้าสู่ระบบ</h1>
+            <p class="login-subtitle">สำหรับผู้ดูแลระบบและช่างเทคนิค</p>
+            <p style="color: #6b7280; font-size: 0.9rem; margin-top: 0.5rem;">
+                ระบบแจ้งซ่อมออนไลน์ - มหาวิทยาลัยสวนดุสิต ศูนย์การศึกษาลำปาง
+            </p>
+        </div>
+
+        <!-- Security Information -->
+        <div class="security-info">
+            <h3>
+                <i class="fas fa-shield-alt"></i>
+                ข้อมูลการเข้าใช้งาน
+            </h3>
+            <ul>
+                <li><strong>ผู้ชมทั่วไป:</strong> สามารถดูข้อมูลและแดชบอร์ดได้โดยไม่ต้องล็อกอิน</li>
+                <li><strong>ช่างเทคนิค:</strong> สามารถอัปเดตสถานะและลบงานได้</li>
+                <li><strong>ผู้ดูแลระบบ:</strong> มีสิทธิ์เต็มในการจัดการระบบ</li>
+            </ul>
+        </div>
+
+        <!-- Security Tips -->
+        <div class="security-tips">
+            <h4>
+                <i class="fas fa-lock"></i>
+                เคล็ดลับความปลอดภัย
+            </h4>
+            <p>
+                กรุณาเก็บรักษาข้อมูลการเข้าสู่ระบบให้ปลอดภัย และอย่าแชร์ให้ผู้อื่น 
+                หากพบการเข้าใช้งานที่ผิดปกติ กรุณาติดต่อผู้ดูแลระบบทันที
+            </p>
+        </div>
+
+        <!-- Alert Messages -->
+        <div id="alertSuccess" class="alert success">
+            <i class="fas fa-check-circle"></i>
+            <span id="successMessage"></span>
+        </div>
+
+        <div id="alertError" class="alert error">
+            <i class="fas fa-exclamation-circle"></i>
+            <span id="errorMessage"></span>
+        </div>
+
+        <div id="alertInfo" class="alert info">
+            <i class="fas fa-info-circle"></i>
+            <span id="infoMessage"></span>
+        </div>
+
+        <!-- Login Form -->
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username" class="form-label">
+                    <i class="fas fa-user"></i>
+                    ชื่อผู้ใช้
+                </label>
+                <input type="text" id="username" name="username" class="form-input" required 
+                       placeholder="กรอกชื่อผู้ใช้" autocomplete="username">
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label">
+                    <i class="fas fa-lock"></i>
+                    รหัสผ่าน
+                </label>
+                <input type="password" id="password" name="password" class="form-input" required 
+                       placeholder="กรอกรหัสผ่าน" autocomplete="current-password">
+            </div>
+
+            <button type="submit" class="login-btn" id="loginBtn">
+                <i class="fas fa-sign-in-alt"></i>
+                เข้าสู่ระบบ
+            </button>
+        </form>
+
+        <!-- Loading Indicator -->
+        <div class="loading" id="loadingIndicator">
+            <div class="spinner"></div>
+            <span>กำลังเข้าสู่ระบบ...</span>
+        </div>
+
+        <!-- Forgot Password -->
+        <div class="forgot-password">
+            <a href="javascript:void(0)" onclick="showForgotPasswordInfo()">
+                <i class="fas fa-question-circle"></i>
+                ลืมรหัสผ่าน?
+            </a>
+        </div>
+
+        <button type="button" class="back-btn" onclick="goBack()">
+            <i class="fas fa-arrow-left"></i>
+            กลับหน้าหลัก
+        </button>
+    </div>
+
+    <!-- Footer -->
+    <footer style="position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); padding: 1rem 0; border-top: 1px solid rgba(255, 255, 255, 0.2); z-index: 1000;">
+        <div style="text-align: center; color: #6b7280;">
+            <p style="margin: 0; font-size: 0.8rem;">
+                © 2025 ระบบแจ้งซ่อมออนไลน์ มหาวิทยาลัยสวนดุสิต ศูนย์การศึกษาลำปาง | พัฒนาโดย ชูเกียรติ กุศลสถิตย์
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        window.baseUrl = '<?= baseUrl ?>';
+if (!window.baseUrl || window.baseUrl.includes('baseUrl')) {
+    // Fallback: ใช้ current URL
+    window.baseUrl = window.location.href.split('?')[0];
+}
+
+// เพิ่ม error handling และ debugging
+console.log('🔗 Base URL initialized:', window.baseUrl);
+
+// ฟังก์ชัน navigation ที่ปรับปรุงแล้วสำหรับ IFRAME mode
+function goToPage(page, newTab = false) {
+    const targetUrl = window.baseUrl + '?page=' + page;
+    console.log('🚀 Navigating to:', targetUrl, 'New tab:', newTab);
+    
+    try {
+        if (newTab) {
+            // เปิดใน tab ใหม่
+            const newWindow = window.open(targetUrl, '_blank');
+            if (!newWindow) {
+                console.warn('⚠️ Popup blocked, using fallback');
+                fallbackNavigation(targetUrl);
+            }
+        } else {
+            // Navigation ใน tab เดียวกัน - ใช้หลายวิธี
+            
+            // Method 1: ลองใช้ window.top (สำหรับ IFRAME)
+            try {
+                if (window.top && window.top.location) {
+                    window.top.location.href = targetUrl;
+                    return;
+                }
+            } catch (e) {
+                console.log('📝 window.top blocked, trying alternatives...');
+            }
+            
+            // Method 2: ลองใช้ window.parent
+            try {
+                if (window.parent && window.parent.location) {
+                    window.parent.location.href = targetUrl;
+                    return;
+                }
+            } catch (e) {
+                console.log('📝 window.parent blocked, trying alternatives...');
+            }
+            
+            // Method 3: ใช้ window.location
+            try {
+                window.location.href = targetUrl;
+                return;
+            } catch (e) {
+                console.log('📝 window.location blocked, using fallback...');
+            }
+            
+            // Method 4: Fallback - ใช้ form submission
+            fallbackNavigation(targetUrl);
+        }
+    } catch (error) {
+        console.error('❌ Navigation error:', error);
+        fallbackNavigation(targetUrl);
+    }
+}
+
+// ฟังก์ชัน fallback สำหรับ navigation (สำคัญ: ใช้ form submit target='_top' เพื่อ bypass sandbox)
+function fallbackNavigation(url) {
+    console.log('🔄 Using fallback navigation to:', url);
+    
+    // สร้าง form สำหรับ navigation (วิธีที่แน่นอนที่สุด)
+    const form = document.createElement('form');
+    form.method = 'GET';
+    form.action = url;
+    form.target = '_top'; // สำคัญ: target="_top" สำหรับ IFRAME mode
+    form.style.display = 'none';
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// ฟังก์ชันสำหรับการนำทางโดยตรง (ใช้ใน handleLoginSuccess)
+function goToPageDirectly(url) {
+    // ลองหลายวิธี navigation
+    const methods = [
+        () => { if (window.top) window.top.location.replace(url); },
+        () => { if (window.parent) window.parent.location.replace(url); },
+        () => { window.location.replace(url); },
+        () => { window.location.href = url; },
+        () => { fallbackNavigation(url); }
+    ];
+    
+    for (let i = 0; i < methods.length; i++) {
+        try {
+            methods[i]();
+            console.log(`✅ Navigation method ${i + 1} succeeded`);
+            return;
+        } catch (e) {
+            console.log(`📝 Navigation method ${i + 1} failed:`, e.message);
+            continue;
+        }
+    }
+}
+
+    function handleLoginSuccess(result) {
+    console.log('Login success data received from server:', result);
+
+    // 1. เก็บข้อมูลผู้ใช้ลงใน localStorage
+    if (result && result.user) {
+        localStorage.setItem('userInfo', JSON.stringify(result.user));
+    }
+
+    // 2. แสดงข้อความแจ้งเตือนสั้นๆ
+    showAlert('success', `เข้าสู่ระบบสำเร็จ! กำลังนำท่านไปยังหน้าหลัก...`);
+
+    // 3. Redirect ด้วย fallback
+    if (result && result.redirectUrl) {
+        fallbackNavigation(result.redirectUrl);
+    } else {
+        // Fallback ถ้าไม่มี redirectUrl
+        console.warn('⚠️ No redirectUrl, falling back to summary');
+        fallbackNavigation(window.baseUrl + '?page=summary');
+    }
+}
+
+// ฟังก์ชัน goBack (ปรับให้ใช้ fallback)
+function goBack() {
+    console.log('Going back to main page...');
+    const indexUrl = window.baseUrl + '?page=index';
+    fallbackNavigation(indexUrl);  // ใช้ fallback เพื่อ bypass sandbox
+}
+
+// ฟังก์ชัน handleLoginSubmit (ตรวจสอบว่าเหมือนเดิม)
+document.getElementById('loginForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    if (!username || !password) {
+        showAlert('error', 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
+        return;
+    }
+    toggleLoading(true);
+    google.script.run
+        .withSuccessHandler(function(result) {
+            // ไม่ต้องทำอะไรมากที่นี่ เพราะ handleLoginSuccess จะจัดการทุกอย่าง
+            if (result && result.success) {
+                handleLoginSuccess(result);
+            } else {
+                toggleLoading(false);
+                showAlert('error', result.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+                document.getElementById('password').value = '';
+            }
+        })
+        .withFailureHandler(function(error) {
+            toggleLoading(false);
+            showAlert('error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error.message);
+            console.error('Login error:', error);
+        })
+        .doLogin(username, password);
+});
+
+        // ฟังก์ชันตรวจสอบความปลอดภัยของข้อมูลที่กรอก
+        function validateLoginInput(username, password) {
+            // ตรวจสอบความยาวของชื่อผู้ใช้
+            if (username.length < 3 || username.length > 50) {
+                showAlert('error', 'ชื่อผู้ใช้ต้องมีความยาว 3-50 ตัวอักษร');
+                return false;
+            }
+            
+            // ตรวจสอบอักขระที่ไม่พึงประสงค์
+            const dangerousChars = /[<>'";&()]/;
+            if (dangerousChars.test(username) || dangerousChars.test(password)) {
+                showAlert('error', 'ข้อมูลที่กรอกมีอักขระที่ไม่อนุญาต');
+                return false;
+            }
+            
+            // ตรวจสอบความยาวของรหัสผ่าน
+            if (password.length < 4) {
+                showAlert('error', 'รหัสผ่านต้องมีความยาวอย่างน้อย 4 ตัวอักษร');
+                return false;
+            }
+            
+            return true;
+        }
+
+        function checkExistingLogin() {
+            const userInfo = localStorage.getItem('userInfo');
+            if (userInfo) {
+                try {
+                    const user = JSON.parse(userInfo);
+                    if (user && user.username) {
+                        showAlert('info', `คุณยังเข้าสู่ระบบอยู่ในนาม: ${user.name || user.username}`);
+                        document.getElementById('username').placeholder = 'คุณเข้าสู่ระบบอยู่แล้ว';
+                        document.getElementById('password').placeholder = 'กรอกรหัสผ่านใหม่เพื่อเข้าสู่ระบบอีกครั้ง';
+                    }
+                } catch (e) {
+                    // ล้างข้อมูลที่เสียหาย
+                    localStorage.removeItem('userInfo');
+                }
+            }
+        }
+
+        function showForgotPasswordInfo() {
+            showAlert('info', 'กรุณาติดต่อผู้ดูแลระบบหรือหน่วย IT เพื่อขอรีเซ็ตรหัสผ่าน โทร: 054-2208019 หรือ email: chookait_kus@dusit.ac.th');
+        }
+
+        function showAlert(type, message) {
+            const successAlert = document.getElementById('alertSuccess');
+            const errorAlert = document.getElementById('alertError');
+            const infoAlert = document.getElementById('alertInfo');
+            
+            // ซ่อนทุกการแจ้งเตือน
+            successAlert.style.display = 'none';
+            errorAlert.style.display = 'none';
+            infoAlert.style.display = 'none';
+            
+            if (type === 'success') {
+                document.getElementById('successMessage').textContent = message;
+                successAlert.style.display = 'flex';
+                setTimeout(() => { successAlert.style.display = 'none'; }, 5000);
+            } else if (type === 'error') {
+                document.getElementById('errorMessage').textContent = message;
+                errorAlert.style.display = 'flex';
+                setTimeout(() => { errorAlert.style.display = 'none'; }, 7000);
+            } else if (type === 'info') {
+                document.getElementById('infoMessage').textContent = message;
+                infoAlert.style.display = 'flex';
+                setTimeout(() => { infoAlert.style.display = 'none'; }, 6000);
+            }
+        }
+
+        function toggleLoading(show) {
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const loginBtn = document.getElementById('loginBtn');
+            const formInputs = document.querySelectorAll('.form-input');
+            
+            loadingIndicator.style.display = show ? 'flex' : 'none';
+            loginBtn.disabled = show;
+            
+            // ปิด/เปิดการใช้งานฟิลด์ input ระหว่างรอ
+            formInputs.forEach(input => {
+                input.disabled = show;
+            });
+            
+            if (show) {
+                loginBtn.innerHTML = '<div class="spinner"></div>กำลังเข้าสู่ระบบ...';
+            } else {
+                loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i>เข้าสู่ระบบ';
+            }
+        }
+
+        // ป้องกันการ copy/paste ที่อาจมีโค้ดอันตราย
+        document.addEventListener('paste', function(e) {
+            const clipboardData = e.clipboardData || window.clipboardData;
+            const pastedData = clipboardData.getData('Text');
+            
+            // ตรวจสอบอักขระที่อันตราย
+            const dangerousPattern = /<script|javascript:|onload=|onerror=/i;
+            if (dangerousPattern.test(pastedData)) {
+                e.preventDefault();
+                showAlert('error', 'ไม่อนุญาตให้วางข้อมูลประเภทนี้');
+            }
+        });
+
+        // ป้องกัน SQL Injection และ XSS พื้นฐาน
+        function sanitizeInput(input) {
+            return input.replace(/[<>'";&]/g, '');
+        }
+
+        function initMobileRuntime() {
+  const setVH = () => {
+    document.documentElement.style.setProperty('--app-vh', `${window.innerHeight * 0.01}px`);
+  };
+
+  setVH();
+  document.body.classList.add('touch-ready');
+
+  window.addEventListener('resize', setVH, { passive: true });
+  window.addEventListener('orientationchange', setVH, { passive: true });
+}
+
+document.addEventListener('DOMContentLoaded', initMobileRuntime);
+    </script>
+</body>
+</html>

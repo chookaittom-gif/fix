@@ -1,0 +1,952 @@
+// ฟังก์ชันช่วยคูณตัวเลขเพื่อหลีกเลี่ยงข้อห้าม
+function mathMultiply(a, b) {
+  var numA = Number(a) || 0;
+  var numB = Number(b) || 0;
+  if (numB === 0) return 0;
+  return numA / (1 / numB);
+}
+
+// [ANCHOR: SERVER-STOCK-GENERATE-RUNNING-PART-ID]
+function generatePartId(masterSheet) {
+  var data = masterSheet.getDataRange().getValues();
+  var maxRunning = 0;
+
+  for (var i = 1; i < data.length; i++) {
+    var currentId = String(data[i][0] || '').trim();
+    var match = currentId.match(/^SP-(\d{4})$/);
+    if (match) {
+      var running = Number(match[1]);
+      if (running > maxRunning) {
+        maxRunning = running;
+      }
+    }
+  }
+
+  var nextRunning = maxRunning + 1;
+  return 'SP-' + String(nextRunning).padStart(4, '0');
+}
+
+// โหลดข้อมูลอะไหล่สำหรับนำไปแสดงในตารางและ Dropdown
+function getSparePartsList() {
+  try {
+    var sheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).getSheetByName('รายการอะไหล่ทั้งหมด');
+    if (!sheet) throw new Error('ไม่พบชีต รายการอะไหล่ทั้งหมด');
+    
+    var data = sheet.getDataRange().getValues();
+    if (data.length <= 1) return { success: true, data: [] };
+    
+    var result =[];
+    for (var i = 1; i < data.length; i++) {
+      result.push({
+        partId: data[i][0],
+        partName: data[i][1],
+        category: data[i][2],
+        unit: data[i][3],
+        cost: data[i][4],
+        balance: data[i][5],
+        reorderPoint: data[i][6],
+        status: data[i][7]
+      });
+    }
+    return { success: true, data: result };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+// [ANCHOR: SERVER-STOCK-NORMALIZE-PART-NAME]
+function normalizePartName(name) {
+  return String(name || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+}
+
+// [ANCHOR: SERVER-STOCK-CREATE-NEW-PART]
+function createNewSparePart(masterSheet, payload) {
+  var newPart = payload.newPart || {};
+
+  var partId = String(newPart.partId || '').trim();
+  var partName = String(newPart.partName || '').trim();
+  var category = String(newPart.category || '').trim();
+  var unit = String(newPart.unit || '').trim();
+  var cost = Number(newPart.cost || 0);
+  var reorderPoint = Number(newPart.reorderPoint || 0);
+  var note = String(payload.note || '').trim();
+
+  if (!partName || !category || !unit) {
+    throw new Error('กรุณากรอกข้อมูลอะไหล่ใหม่ให้ครบ: ชื่ออะไหล่ หมวดหมู่ และหน่วยนับ');
+  }
+
+  if (cost < 0) {
+    throw new Error('ราคาต่อหน่วยต้องไม่ติดลบ');
+  }
+
+  if (reorderPoint < 0) {
+    throw new Error('จุดเตือนใกล้หมดต้องไม่ติดลบ');
+  }
+
+  var masterData = masterSheet.getDataRange().getValues();
+  var normalizedNewName = normalizePartName(partName);
+
+  for (var i = 1; i < masterData.length; i++) {
+    var existingPartId = String(masterData[i][0] || '').trim();
+    var existingPartName = String(masterData[i][1] || '').trim();
+    var normalizedExistingName = normalizePartName(existingPartName);
+
+    if (partId && existingPartId === partId) {
+      throw new Error('รหัสอะไหล่นี้มีอยู่แล้วในระบบ');
+    }
+
+    if (normalizedExistingName && normalizedExistingName === normalizedNewName) {
+      throw new Error('ชื่ออะไหล่นี้มีอยู่แล้วในระบบ: ' + existingPartName);
+    }
+  }
+
+  if (!partId) {
+    partId = generatePartId(masterSheet);
+  }
+
+  var now = new Date();
+  var d = String(now.getDate()).padStart(2, '0');
+  var m = String(now.getMonth() + 1).padStart(2, '0');
+  var y = now.getFullYear() + 543;
+  var h = String(now.getHours()).padStart(2, '0');
+  var min = String(now.getMinutes()).padStart(2, '0');
+  var createdDate = d + '/' + m + '/' + y + ' ' + h + ':' + min + ' น.';
+
+  masterSheet.appendRow([
+    partId,
+    partName,
+    category,
+    unit,
+    cost,
+    0,
+    reorderPoint,
+    'ปกติ',
+    createdDate,
+    note
+  ]);
+
+  SpreadsheetApp.flush();
+
+  return {
+    partId: partId,
+    partName: partName
+  };
+}
+
+// [ANCHOR: SERVER-STOCK-PROCESS-TRANSACTION]
+function processStockTransaction(payload) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(15000)) {
+    return { success: false, error: 'ระบบกำลังทำงาน กรุณารอสักครู่แล้วลองใหม่' };
+  }
+
+  try {
+    Logger.log('STEP1 payload=' + JSON.stringify(payload));
+
+    var ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+    var masterSheet = ss.getSheetByName('รายการอะไหล่ทั้งหมด');
+    var ledgerSheet = ss.getSheetByName('ประวัติสต็อกอะไหล่');
+
+    if (!masterSheet || !ledgerSheet) {
+      throw new Error('โครงสร้างชีตสต็อกไม่สมบูรณ์');
+    }
+
+    var partId = String(payload.partId || '').trim();
+    var type = String(payload.type || '').trim();
+    var qty = Number(payload.qty || 0);
+    var refJob = String(payload.refJob || '').trim();
+    var user = String(payload.user || '').trim();
+    var note = String(payload.note || '').trim();
+    var isNewPart = (partId === '__new__');
+
+    Logger.log('STEP2 isNewPart=' + isNewPart + ', type=' + type + ', qty=' + qty);
+
+    if (qty <= 0 || !type) {
+      throw new Error('ข้อมูลไม่ครบถ้วน หรือจำนวนไม่ถูกต้อง');
+    }
+
+    if (isNewPart && type !== 'รับเข้า') {
+      throw new Error('การเพิ่มอะไหล่ใหม่ทำได้เฉพาะรายการรับเข้าเท่านั้น');
+    }
+
+    if (isNewPart) {
+      var createdPart = createNewSparePart(masterSheet, payload);
+      partId = createdPart.partId;
+      Logger.log('STEP3 created new partId=' + partId);
+    }
+
+    var masterData = masterSheet.getDataRange().getValues();
+    var rowIndex = -1;
+    var currentBalance = 0;
+    var partName = '';
+    var cost = 0;
+    var reorderPoint = 0;
+
+    for (var i = 1; i < masterData.length; i++) {
+      if (String(masterData[i][0] || '').trim() === partId) {
+        rowIndex = i + 1;
+        partName = String(masterData[i][1] || '').trim();
+        cost = Number(masterData[i][4] || 0);
+        currentBalance = Number(masterData[i][5] || 0);
+        reorderPoint = Number(masterData[i][6] || 0);
+        break;
+      }
+    }
+
+    Logger.log('STEP4 rowIndex=' + rowIndex + ', currentBalance=' + currentBalance);
+
+    if (rowIndex === -1) {
+      throw new Error('ไม่พบรหัสอะไหล่ในระบบ');
+    }
+
+    var isDeduction = (type === 'เบิกออก' || type === 'ใช้ในงานซ่อม' || type === 'ปรับลด');
+    var isAddition = (type === 'รับเข้า' || type === 'ปรับเพิ่ม' || type === 'คืนเข้า');
+
+    var newBalance = currentBalance;
+
+    if (isDeduction) {
+      if (currentBalance < qty) {
+        throw new Error('สต็อกไม่เพียงพอ (คงเหลือ: ' + currentBalance + ')');
+      }
+      newBalance = currentBalance - qty;
+    } else if (isAddition) {
+      newBalance = currentBalance + qty;
+    } else {
+      throw new Error('ประเภทรายการไม่ถูกต้อง');
+    }
+
+    Logger.log('STEP5 newBalance=' + newBalance);
+
+    var totalPrice = mathMultiply(qty, cost);
+    var now = new Date();
+    var d = String(now.getDate()).padStart(2, '0');
+    var m = String(now.getMonth() + 1).padStart(2, '0');
+    var y = now.getFullYear() + 543;
+    var h = String(now.getHours()).padStart(2, '0');
+    var min = String(now.getMinutes()).padStart(2, '0');
+    var dateStr = d + '/' + m + '/' + y + ' ' + h + ':' + min + ' น.';
+    var transId = 'TR-' + y + m + d + '-' + String(now.getTime()).slice(-4);
+
+    masterSheet.getRange(rowIndex, 6).setValue(newBalance);
+
+    var stockStatus = newBalance <= reorderPoint ? 'ใกล้หมด' : 'ปกติ';
+    masterSheet.getRange(rowIndex, 8).setValue(stockStatus);
+
+    ledgerSheet.appendRow([
+      transId,
+      dateStr,
+      partId,
+      partName,
+      type,
+      qty,
+      totalPrice,
+      refJob,
+      user,
+      note
+    ]);
+
+    SpreadsheetApp.flush();
+
+    Logger.log('STEP6 PASS processStockTransaction');
+
+    return {
+      success: true,
+      message: 'บันทึกรายการสำเร็จ',
+      newBalance: newBalance,
+      isLowStock: newBalance <= reorderPoint,
+      partId: partId,
+      partName: partName
+    };
+
+  } catch (error) {
+    Logger.log('FAIL processStockTransaction: ' + error.message);
+    Logger.log(error.stack);
+    return { success: false, error: error.message };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+
+
+function initializeStockSystem() {
+  try {
+    const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+    const logs =[];
+
+    // 1. ตรวจสอบและสร้างชีต "รายการอะไหล่ทั้งหมด" (Master Data)
+    const masterSheetName = 'รายการอะไหล่ทั้งหมด';
+    let masterSheet = ss.getSheetByName(masterSheetName);
+    
+    if (!masterSheet) {
+      masterSheet = ss.insertSheet(masterSheetName);
+      const masterHeaders =[
+        'รหัสอะไหล่', 
+        'ชื่ออะไหล่', 
+        'หมวดหมู่', 
+        'หน่วยนับ', 
+        'ราคาต้นทุน', 
+        'ยอดคงเหลือปัจจุบัน', 
+        'จุดสั่งซื้อขั้นต่ำ', 
+        'สถานะ', 
+        'วันที่เพิ่มข้อมูล', 
+        'หมายเหตุ'
+      ];
+      // เซ็ตหัวคอลัมน์ แถวที่ 1
+      masterSheet.getRange(1, 1, 1, masterHeaders.length)
+                 .setValues([masterHeaders])
+                 .setFontWeight('bold')
+                 .setBackground('#e0f2fe'); // สีฟ้าอ่อน
+      masterSheet.setFrozenRows(1);
+      
+      // ปรับขนาดคอลัมน์เบื้องต้นให้สวยงาม
+      masterSheet.setColumnWidth(1, 150); // รหัส
+      masterSheet.setColumnWidth(2, 250); // ชื่อ
+      
+      logs.push('✅ สร้างชีต: ' + masterSheetName + ' เรียบร้อยแล้ว');
+    } else {
+      logs.push('ℹ️ ชีต: ' + masterSheetName + ' มีอยู่แล้ว');
+    }
+
+    // 2. ตรวจสอบและสร้างชีต "ประวัติสต็อกอะไหล่" (Ledger)
+    const ledgerSheetName = 'ประวัติสต็อกอะไหล่';
+    let ledgerSheet = ss.getSheetByName(ledgerSheetName);
+    
+    if (!ledgerSheet) {
+      ledgerSheet = ss.insertSheet(ledgerSheetName);
+      const ledgerHeaders =[
+        'รหัสทำรายการ', 
+        'วันที่ทำรายการ', 
+        'รหัสอะไหล่', 
+        'ชื่ออะไหล่', 
+        'ประเภทรายการ', 
+        'จำนวน', 
+        'มูลค่ารวม', 
+        'อ้างอิงเลขที่แจ้งซ่อม', 
+        'ผู้ทำรายการ', 
+        'หมายเหตุ'
+      ];
+      // เซ็ตหัวคอลัมน์ แถวที่ 1
+      ledgerSheet.getRange(1, 1, 1, ledgerHeaders.length)
+                 .setValues([ledgerHeaders])
+                 .setFontWeight('bold')
+                 .setBackground('#f3e8ff'); // สีม่วงอ่อน
+      ledgerSheet.setFrozenRows(1);
+      
+      // ปรับขนาดคอลัมน์เบื้องต้นให้สวยงาม
+      ledgerSheet.setColumnWidth(1, 150); // รหัสรายการ
+      ledgerSheet.setColumnWidth(2, 150); // วันที่
+      ledgerSheet.setColumnWidth(4, 200); // ชื่ออะไหล่
+      ledgerSheet.setColumnWidth(8, 180); // อ้างอิงแจ้งซ่อม
+      
+      logs.push('✅ สร้างชีต: ' + ledgerSheetName + ' เรียบร้อยแล้ว');
+    } else {
+      logs.push('ℹ️ ชีต: ' + ledgerSheetName + ' มีอยู่แล้ว');
+    }
+
+    // สรุปผล
+    logs.forEach(msg => Logger.log(msg));
+    return { success: true, message: 'ตั้งค่าโครงสร้างฐานข้อมูลสต็อกสำเร็จ', logs: logs };
+
+  } catch (error) {
+    Logger.log('❌ เกิดข้อผิดพลาด: ' + error.message);
+    return { success: false, error: error.message };
+  }
+}
+
+
+// [ANCHOR: SERVER-STOCK-GENERATE-MONTHLY-PDF]
+function generateMonthlyStockReport(month, yearBE) {
+  try {
+    var ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+    var masterSheet = ss.getSheetByName('รายการอะไหล่ทั้งหมด');
+    var ledgerSheet = ss.getSheetByName('ประวัติสต็อกอะไหล่');
+
+    if (!masterSheet || !ledgerSheet) {
+      throw new Error('ไม่พบชีตสำหรับสร้างรายงานสต็อก');
+    }
+
+    var tz = Session.getScriptTimeZone();
+    var now = new Date();
+
+    var thaiMonths = (CONFIG && CONFIG.MONTHS_TH && CONFIG.MONTHS_TH.length === 12)
+      ? CONFIG.MONTHS_TH
+      : ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+
+    var currentYearBE = now.getFullYear() + 543;
+    var targetMonth = Number(month || (now.getMonth() + 1));
+    var targetYearBE = Number(yearBE || currentYearBE);
+    var targetMonthText = String(targetMonth).padStart(2, '0');
+    var monthLabel = thaiMonths[targetMonth - 1] + ' ' + targetYearBE;
+
+    var reportDate =
+      Utilities.formatDate(now, tz, 'd') + ' ' +
+      thaiMonths[now.getMonth()] + ' ' +
+      (now.getFullYear() + 543) + ' ' +
+      Utilities.formatDate(now, tz, 'HH:mm') + ' น.';
+
+    var fileMonthLabel = String(targetMonth).padStart(2, '0') + '-' + targetYearBE;
+
+    var masterData = masterSheet.getDataRange().getValues();
+    var ledgerData = ledgerSheet.getDataRange().getValues();
+
+    var totalParts = 0;
+    var lowStockCount = 0;
+    var totalStockValue = 0;
+    var totalInQty = 0;
+    var totalOutQty = 0;
+
+    var bodyRows = [];
+
+    for (var i = 1; i < masterData.length; i++) {
+      var partId = String(masterData[i][0] || '').trim();
+      var partName = String(masterData[i][1] || '').trim();
+      var category = String(masterData[i][2] || '').trim();
+      var unit = String(masterData[i][3] || '').trim();
+      var cost = Number(masterData[i][4] || 0);
+      var balance = Number(masterData[i][5] || 0);
+      var reorderPoint = Number(masterData[i][6] || 0);
+      var status = balance <= reorderPoint ? 'ใกล้หมด' : 'ปกติ';
+
+      if (!partId && !partName) continue;
+
+      totalParts++;
+      if (status === 'ใกล้หมด') lowStockCount++;
+      totalStockValue += (balance * cost);
+
+      var inQty = 0;
+      var outQty = 0;
+
+      for (var j = 1; j < ledgerData.length; j++) {
+        var ledgerPartId = String(ledgerData[j][2] || '').trim();
+        var ledgerType = String(ledgerData[j][4] || '').trim();
+        var ledgerQty = Number(ledgerData[j][5] || 0);
+        var ledgerDateText = String(ledgerData[j][1] || '').trim();
+
+        if (ledgerPartId !== partId) continue;
+
+        var match = ledgerDateText.match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);
+        if (!match) continue;
+
+        var ledgerMonth = match[2].padStart(2, '0');
+        var ledgerYear = Number(match[3]);
+
+        if (ledgerYear < 2400) ledgerYear += 543;
+
+        if (ledgerMonth !== targetMonthText || ledgerYear !== targetYearBE) continue;
+
+        if (ledgerType === 'รับเข้า' || ledgerType === 'ปรับเพิ่ม' || ledgerType === 'คืนเข้า') {
+          inQty += ledgerQty;
+          totalInQty += ledgerQty;
+        }
+
+        if (ledgerType === 'เบิกออก' || ledgerType === 'ใช้ในงานซ่อม' || ledgerType === 'ปรับลด') {
+          outQty += ledgerQty;
+          totalOutQty += ledgerQty;
+        }
+      }
+
+      var openingBalance = balance - inQty + outQty;
+
+      bodyRows.push([
+        totalParts,
+        partId,
+        partName,
+        category,
+        unit,
+        openingBalance,
+        inQty,
+        outQty,
+        balance,
+        status
+      ]);
+    }
+
+    var html = [];
+    html.push('<html><head><meta charset="UTF-8">');
+    html.push('<style>');
+    html.push('body{font-family:Tahoma,sans-serif;font-size:12px;color:#222;}');
+    html.push('.title{font-size:20px;font-weight:bold;text-align:center;margin-bottom:6px;}');
+    html.push('.subtitle{text-align:center;margin-bottom:4px;}');
+    html.push('.meta{margin:14px 0;}');
+    html.push('.summary{margin:14px 0;padding:10px;border:1px solid #ddd;background:#fafafa;}');
+    html.push('table{width:100%;border-collapse:collapse;margin-top:12px;font-size:11px;}');
+    html.push('th,td{border:1px solid #ccc;padding:6px;vertical-align:top;}');
+    html.push('th{background:#f0f0f0;text-align:center;}');
+    html.push('.center{text-align:center;}');
+    html.push('.right{text-align:right;}');
+    html.push('.low{background:#fff1f2;}');
+    html.push('.footer{margin-top:20px;font-size:11px;}');
+    html.push('</style></head><body>');
+
+    html.push('<div class="title">รายงานสรุปสต็อกอะไหล่ประจำเดือน</div>');
+    html.push('<div class="subtitle">ระบบบริหารจัดการสต็อกอะไหล่</div>');
+    html.push('<div class="subtitle">เดือน ' + monthLabel + '</div>');
+
+    html.push('<div class="meta">');
+    html.push('<div>วันที่ออกรายงาน: ' + reportDate + '</div>');
+    html.push('</div>');
+
+    html.push('<div class="summary">');
+    html.push('<div>จำนวนอะไหล่ทั้งหมด: ' + totalParts + ' รายการ</div>');
+    html.push('<div>จำนวนอะไหล่ใกล้หมด: ' + lowStockCount + ' รายการ</div>');
+    html.push('<div>มูลค่าสต็อกคงเหลือรวม: ' + totalStockValue.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' บาท</div>');
+    html.push('<div>จำนวนรับเข้ารวมเดือนนี้: ' + totalInQty + '</div>');
+    html.push('<div>จำนวนเบิกออกรวมเดือนนี้: ' + totalOutQty + '</div>');
+    html.push('</div>');
+
+    html.push('<table>');
+    html.push('<thead>');
+    html.push('<tr>');
+    html.push('<th>ลำดับ</th>');
+    html.push('<th>รหัสอะไหล่</th>');
+    html.push('<th>ชื่ออะไหล่</th>');
+    html.push('<th>หมวดหมู่</th>');
+    html.push('<th>หน่วย</th>');
+    html.push('<th>ยอดต้นเดือน</th>');
+    html.push('<th>รับเข้า</th>');
+    html.push('<th>เบิกออก</th>');
+    html.push('<th>คงเหลือ</th>');
+    html.push('<th>สถานะ</th>');
+    html.push('</tr>');
+    html.push('</thead>');
+    html.push('<tbody>');
+
+    if (bodyRows.length === 0) {
+      html.push('<tr><td colspan="10" class="center">ไม่มีข้อมูลอะไหล่ในระบบ</td></tr>');
+    } else {
+      for (var r = 0; r < bodyRows.length; r++) {
+        var row = bodyRows[r];
+        var isLow = row[9] === 'ใกล้หมด';
+
+        html.push('<tr class="' + (isLow ? 'low' : '') + '">');
+        html.push('<td class="center">' + row[0] + '</td>');
+        html.push('<td>' + row[1] + '</td>');
+        html.push('<td>' + row[2] + '</td>');
+        html.push('<td>' + row[3] + '</td>');
+        html.push('<td class="center">' + row[4] + '</td>');
+        html.push('<td class="right">' + row[5] + '</td>');
+        html.push('<td class="right">' + row[6] + '</td>');
+        html.push('<td class="right">' + row[7] + '</td>');
+        html.push('<td class="right">' + row[8] + '</td>');
+        html.push('<td class="center">' + row[9] + '</td>');
+        html.push('</tr>');
+      }
+    }
+
+    html.push('</tbody></table>');
+    html.push('<div class="footer">หมายเหตุ: สถานะ "ใกล้หมด" หมายถึงยอดคงเหลือน้อยกว่าหรือเท่ากับจุดเตือน</div>');
+    html.push('</body></html>');
+
+    var blob = HtmlService.createHtmlOutput(html.join(''))
+      .getBlob()
+      .getAs('application/pdf')
+      .setName('รายงานสรุปสต็อกอะไหล่_' + fileMonthLabel + '.pdf');
+
+    var folder = DriveApp.getRootFolder();
+    var file = folder.createFile(blob);
+
+    return {
+      success: true,
+      fileId: file.getId(),
+      url: file.getUrl(),
+      name: file.getName()
+    };
+
+  } catch (error) {
+    Logger.log('generateMonthlyStockReport error: ' + error.message);
+    Logger.log(error.stack);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+// ANCHOR: ฟังก์ชันโหลดข้อมูลอะไหล่สำหรับนำไปแสดง... (หาบรรทัดนี้หรือใกล้เคียงเพื่อวางฟังก์ชันใหม่)
+function getAvailableStockReportMonths() {
+  try {
+    var sheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).getSheetByName('ประวัติสต็อกอะไหล่');
+    var values = sheet.getRange(2, 2, Math.max(1, sheet.getLastRow() - 1), 1).getDisplayValues();
+    var monthSet = new Set();
+    
+    for (var i = 0; i < values.length; i++) {
+      var dateStr = String(values[i][0] || '').trim();
+      if (!dateStr) continue;
+      var match = dateStr.match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);
+      if (match) {
+        var y = parseInt(match[3], 10);
+        if (y < 2400) y += 543; // บังคับเป็น พ.ศ.
+        var m = parseInt(match[2], 10);
+        monthSet.add(y + '-' + String(m).padStart(2, '0'));
+      }
+    }
+    
+    var sorted = Array.from(monthSet).sort().reverse().map(function(key) {
+      var parts = key.split('-');
+      var y = parseInt(parts[0], 10);
+      var m = parseInt(parts[1], 10);
+      return { yearBE: y, month: m, label: CONFIG.MONTHS_TH[m - 1] + ' ' + y };
+    });
+    return { success: true, months: sorted };
+  } catch (e) { return { success: false, error: e.message }; }
+}
+
+function formatShortDate(dateObj) {
+  if (!(dateObj instanceof Date) || isNaN(dateObj)) return '-';
+  var d = dateObj.getDate();
+  var m = dateObj.getMonth() + 1;
+  var y = dateObj.getFullYear();
+  if (y < 2400) y += 543;
+  return d + '/' + m + '/' + String(y).slice(-2); // คืนค่าแบบ 25/3/69
+}
+
+// var stockStatus = newBalance <= reorderPoint ? 'ใกล้หมด' : 'ปกติ';
+// masterSheet.getRange(rowIndex, 8).setValue(stockStatus);
+
+function updateSparePartRow(partId, newName, newCat, newUnit, newReorderPoint) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) return { success: false, error: 'ระบบยุ่ง กรุณาลองใหม่' };
+  try {
+    var sheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).getSheetByName('รายการอะไหล่ทั้งหมด');
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]).trim() === partId) {
+        sheet.getRange(i + 1, 2).setValue(newName);
+        sheet.getRange(i + 1, 3).setValue(newCat);
+        sheet.getRange(i + 1, 4).setValue(newUnit);
+        sheet.getRange(i + 1, 7).setValue(newReorderPoint);
+        
+        var bal = Number(data[i][5] || 0);
+        sheet.getRange(i + 1, 8).setValue(bal <= Number(newReorderPoint) ? 'ใกล้หมด' : 'ปกติ');
+        return { success: true };
+      }
+    }
+    return { success: false, error: 'ไม่พบรหัสอะไหล่' };
+  } catch(e) { return { success: false, error: e.message }; } finally { lock.releaseLock(); }
+}
+
+function deleteSparePartRow(partId) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) return { success: false, error: 'ระบบยุ่ง' };
+  try {
+    var sheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).getSheetByName('รายการอะไหล่ทั้งหมด');
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]).trim() === partId) {
+        sheet.deleteRow(i + 1);
+        return { success: true };
+      }
+    }
+    return { success: false, error: 'ไม่พบรหัสอะไหล่' };
+  } catch(e) { return { success: false, error: e.message }; } finally { lock.releaseLock(); }
+}
+
+// [ANCHOR: SERVER-STOCK-FULL-SELF-TEST-WITH-KEEP-DATA]
+function testStockFullSystem(options) {
+  Logger.log('========== STOCK SYSTEM TEST START ==========');
+
+  options = options || {};
+  var keepTestData = options.keepTestData === true;
+
+  var logs = [];
+  var ok = true;
+
+  function log(step, msg) {
+    var line = '[' + step + '] ' + msg;
+    logs.push(line);
+    Logger.log(line);
+  }
+
+  function fail(msg) {
+    ok = false;
+    throw new Error(msg);
+  }
+
+  function assertTrue(condition, msg) {
+    if (!condition) fail(msg);
+  }
+
+  function assertEqual(actual, expected, msg) {
+    if (actual !== expected) {
+      fail(msg + ' | expected=' + expected + ' actual=' + actual);
+    }
+  }
+
+  function findPartById(list, partId) {
+    for (var i = 0; i < list.length; i++) {
+      if (String(list[i].partId || '').trim() === String(partId || '').trim()) {
+        return list[i];
+      }
+    }
+    return null;
+  }
+
+  function findPartRow(sheet, partId) {
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0] || '').trim() === String(partId || '').trim()) {
+        return {
+          rowIndex: i + 1,
+          values: data[i]
+        };
+      }
+    }
+    return null;
+  }
+
+  var partId = '';
+  var finalBalance = 0;
+  var typeCountMap = {
+    'รับเข้า': 0,
+    'ใช้ในงานซ่อม': 0,
+    'คืนเข้า': 0,
+    'เบิกออก': 0
+  };
+  var createdDateValue = '';
+  var createdNoteValue = '';
+
+  try {
+    var initRes = initializeStockSystem();
+    log('INIT', JSON.stringify(initRes));
+    assertTrue(initRes && initRes.success, 'ไม่สามารถ initializeStockSystem ได้');
+
+    var tz = Session.getScriptTimeZone();
+    var now = new Date();
+    var testSuffix = Utilities.formatDate(now, tz, 'yyyyMMdd-HHmmss');
+    var testPartName = 'TEST-AUTO LED ' + testSuffix;
+    var updatedPartName = testPartName + ' EDITED';
+    var searchKeywordBeforeEdit = testSuffix;
+    var searchKeywordAfterEdit = 'EDITED';
+
+    log('STEP0', 'testPartName=' + testPartName);
+
+    var payloadCreate = {
+      partId: '__new__',
+      type: 'รับเข้า',
+      qty: 10,
+      refJob: '',
+      user: 'SYSTEM_TEST',
+      note: 'Self test create new part',
+      newPart: {
+        partId: '',
+        partName: testPartName,
+        category: 'ไฟฟ้า',
+        unit: 'ชิ้น',
+        cost: 100,
+        reorderPoint: 3
+      }
+    };
+
+    log('STEP1', 'CREATE NEW PART');
+    var resultCreate = processStockTransaction(payloadCreate);
+    log('STEP1_RESULT', JSON.stringify(resultCreate));
+    assertTrue(resultCreate && resultCreate.success, 'เพิ่มอะไหล่ใหม่ไม่สำเร็จ: ' + (resultCreate && resultCreate.error));
+
+    partId = String(resultCreate.partId || '').trim();
+    assertTrue(!!partId, 'ไม่พบ partId หลังสร้างอะไหล่ใหม่');
+
+    log('STEP1A', 'CHECK MASTER CREATED DATE AND NOTE');
+
+    var ssCreateCheck = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+    var masterSheetCreateCheck = ssCreateCheck.getSheetByName('รายการอะไหล่ทั้งหมด');
+    assertTrue(!!masterSheetCreateCheck, 'ไม่พบชีตรายการอะไหล่ทั้งหมด');
+
+    var createdRow = findPartRow(masterSheetCreateCheck, partId);
+    assertTrue(!!createdRow, 'ไม่พบแถวอะไหล่ใหม่ใน master sheet');
+
+    createdDateValue = String(createdRow.values[8] || '').trim();
+    createdNoteValue = String(createdRow.values[9] || '').trim();
+
+    log('STEP1A_MASTER', JSON.stringify({
+      partId: partId,
+      createdDate: createdDateValue,
+      note: createdNoteValue
+    }));
+
+    assertTrue(createdDateValue !== '', 'คอลัมน์วันที่เพิ่มข้อมูลยังว่าง');
+    assertEqual(createdNoteValue, 'Self test create new part', 'คอลัมน์หมายเหตุไม่ถูกต้อง');
+
+    log('STEP2', 'SEARCH PART');
+    var listAfterCreate = getSparePartsList();
+    log('STEP2_LIST', JSON.stringify(listAfterCreate));
+    assertTrue(listAfterCreate && listAfterCreate.success, 'โหลดรายการอะไหล่ไม่สำเร็จ');
+
+    var matchedBeforeEdit = (listAfterCreate.data || []).filter(function(item) {
+      var hay = [
+        item.partId,
+        item.partName,
+        item.category,
+        item.unit,
+        item.status
+      ].join(' ').toUpperCase();
+      return hay.indexOf(String(searchKeywordBeforeEdit).toUpperCase()) > -1;
+    });
+
+    assertTrue(matchedBeforeEdit.length > 0, 'ค้นหาอะไหล่ใหม่ไม่พบ');
+
+    log('STEP3', 'UPDATE PART');
+    var resultUpdate = updateSparePartRow(partId, updatedPartName, 'ไฟฟ้าปรับปรุง', 'ชิ้น', 4);
+    log('STEP3_RESULT', JSON.stringify(resultUpdate));
+    assertTrue(resultUpdate && resultUpdate.success, 'แก้ไขอะไหล่ไม่สำเร็จ: ' + (resultUpdate && resultUpdate.error));
+
+    var listAfterUpdate = getSparePartsList();
+    assertTrue(listAfterUpdate && listAfterUpdate.success, 'โหลดรายการอะไหล่หลังแก้ไขไม่สำเร็จ');
+
+    var updatedPart = findPartById(listAfterUpdate.data || [], partId);
+    assertTrue(!!updatedPart, 'ไม่พบอะไหล่หลังแก้ไข');
+    assertEqual(String(updatedPart.partName || ''), updatedPartName, 'ชื่ออะไหล่หลังแก้ไขไม่ถูกต้อง');
+    assertEqual(String(updatedPart.category || ''), 'ไฟฟ้าปรับปรุง', 'หมวดหมู่หลังแก้ไขไม่ถูกต้อง');
+    assertEqual(String(updatedPart.unit || ''), 'ชิ้น', 'หน่วยหลังแก้ไขไม่ถูกต้อง');
+    assertEqual(Number(updatedPart.reorderPoint || 0), 4, 'จุดเตือนหลังแก้ไขไม่ถูกต้อง');
+
+    var matchedAfterEdit = (listAfterUpdate.data || []).filter(function(item) {
+      var hay = [
+        item.partId,
+        item.partName,
+        item.category,
+        item.unit,
+        item.status
+      ].join(' ').toUpperCase();
+      return hay.indexOf(String(searchKeywordAfterEdit).toUpperCase()) > -1;
+    });
+
+    assertTrue(matchedAfterEdit.length > 0, 'ค้นหาหลังแก้ไขไม่พบ');
+
+    log('STEP4', 'RECEIVE');
+    var resultReceive = processStockTransaction({
+      partId: partId,
+      type: 'รับเข้า',
+      qty: 5,
+      refJob: '',
+      user: 'SYSTEM_TEST',
+      note: 'Self test receive'
+    });
+    log('STEP4_RESULT', JSON.stringify(resultReceive));
+    assertTrue(resultReceive && resultReceive.success, 'รับเข้าไม่สำเร็จ: ' + (resultReceive && resultReceive.error));
+
+    log('STEP5', 'USE IN REPAIR');
+    var resultUse = processStockTransaction({
+      partId: partId,
+      type: 'ใช้ในงานซ่อม',
+      qty: 3,
+      refJob: 'TEST-JOB-' + testSuffix,
+      user: 'SYSTEM_TEST',
+      note: 'Self test use in repair'
+    });
+    log('STEP5_RESULT', JSON.stringify(resultUse));
+    assertTrue(resultUse && resultUse.success, 'ใช้ในงานซ่อมไม่สำเร็จ: ' + (resultUse && resultUse.error));
+
+    log('STEP6', 'RETURN TO STOCK');
+    var resultReturn = processStockTransaction({
+      partId: partId,
+      type: 'คืนเข้า',
+      qty: 1,
+      refJob: 'TEST-JOB-' + testSuffix,
+      user: 'SYSTEM_TEST',
+      note: 'Self test return to stock'
+    });
+    log('STEP6_RESULT', JSON.stringify(resultReturn));
+    assertTrue(resultReturn && resultReturn.success, 'คืนเข้าสต็อกไม่สำเร็จ: ' + (resultReturn && resultReturn.error));
+
+    log('STEP7', 'DEDUCT');
+    var resultDeduct = processStockTransaction({
+      partId: partId,
+      type: 'เบิกออก',
+      qty: 2,
+      refJob: '',
+      user: 'SYSTEM_TEST',
+      note: 'Self test deduct'
+    });
+    log('STEP7_RESULT', JSON.stringify(resultDeduct));
+    assertTrue(resultDeduct && resultDeduct.success, 'เบิกออกไม่สำเร็จ: ' + (resultDeduct && resultDeduct.error));
+
+    log('STEP8', 'CHECK FINAL BALANCE');
+    var finalListRes = getSparePartsList();
+    assertTrue(finalListRes && finalListRes.success, 'โหลดรายการอะไหล่เพื่อตรวจยอดไม่สำเร็จ');
+
+    var finalPart = findPartById(finalListRes.data || [], partId);
+    assertTrue(!!finalPart, 'ไม่พบอะไหล่เพื่อตรวจยอดคงเหลือ');
+
+    finalBalance = Number(finalPart.balance || 0);
+    assertEqual(finalBalance, 11, 'ยอดคงเหลือสุดท้ายไม่ถูกต้อง');
+
+    log('STEP9', 'CHECK LEDGER RECORDS');
+    var ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+    var ledgerSheet = ss.getSheetByName('ประวัติสต็อกอะไหล่');
+    assertTrue(!!ledgerSheet, 'ไม่พบชีตประวัติสต็อกอะไหล่');
+
+    var ledgerData = ledgerSheet.getDataRange().getValues();
+
+    for (var i = 1; i < ledgerData.length; i++) {
+      var rowPartId = String(ledgerData[i][2] || '').trim();
+      var rowType = String(ledgerData[i][4] || '').trim();
+
+      if (rowPartId === partId && typeCountMap.hasOwnProperty(rowType)) {
+        typeCountMap[rowType]++;
+      }
+    }
+
+    log('STEP9_LEDGER', JSON.stringify(typeCountMap));
+
+    assertTrue(typeCountMap['รับเข้า'] >= 2, 'ledger รับเข้าไม่ครบ');
+    assertTrue(typeCountMap['ใช้ในงานซ่อม'] >= 1, 'ledger ใช้ในงานซ่อมไม่ครบ');
+    assertTrue(typeCountMap['คืนเข้า'] >= 1, 'ledger คืนเข้าไม่ครบ');
+    assertTrue(typeCountMap['เบิกออก'] >= 1, 'ledger เบิกออกไม่ครบ');
+
+    if (keepTestData) {
+      log('STEP10', 'SKIP DELETE PART (keepTestData=true)');
+    } else {
+      log('STEP10', 'DELETE PART');
+      var resultDelete = deleteSparePartRow(partId);
+      log('STEP10_RESULT', JSON.stringify(resultDelete));
+      assertTrue(resultDelete && resultDelete.success, 'ลบอะไหล่ไม่สำเร็จ: ' + (resultDelete && resultDelete.error));
+
+      var listAfterDelete = getSparePartsList();
+      assertTrue(listAfterDelete && listAfterDelete.success, 'โหลดรายการอะไหล่หลังลบไม่สำเร็จ');
+
+      var deletedPart = findPartById(listAfterDelete.data || [], partId);
+      assertTrue(!deletedPart, 'ลบแล้วแต่ยังพบอะไหล่ใน master');
+    }
+
+    log('PASS', '========== STOCK SYSTEM TEST PASS ==========');
+
+    return {
+      success: true,
+      message: 'STOCK SYSTEM TEST PASS',
+      keepTestData: keepTestData,
+      partId: partId,
+      finalBalanceBeforeDelete: finalBalance,
+      ledgerTypeCount: typeCountMap,
+      createdDateInMaster: createdDateValue,
+      createdNoteInMaster: createdNoteValue,
+      logs: logs
+    };
+
+  } catch (error) {
+    log('FAIL', error.message);
+    Logger.log(error.stack);
+
+    return {
+      success: false,
+      error: error.message,
+      keepTestData: keepTestData,
+      partId: partId,
+      finalBalanceBeforeDelete: finalBalance,
+      ledgerTypeCount: typeCountMap,
+      createdDateInMaster: createdDateValue,
+      createdNoteInMaster: createdNoteValue,
+      logs: logs
+    };
+  }
+}
+
+// [ANCHOR: SERVER-STOCK-TEST-KEEP-DATA]
+function testStockFullSystemKeepData() {
+  var res = testStockFullSystem({ keepTestData: true });
+  Logger.log(JSON.stringify(res));
+  return res;
+}

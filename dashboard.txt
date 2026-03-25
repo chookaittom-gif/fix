@@ -1,0 +1,4963 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <script>window.BASE_URL = '<?= baseUrl ?>';</script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แดชบอร์ดระบบแจ้งซ่อม</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+:root {
+    --primary-color: #3b82f6;
+    --primary-dark: #2563eb;
+    --primary-light: #93c5fd;
+    --secondary-color: #f59e0b;
+    --secondary-dark: #d97706;
+    --success-color: #10b981;
+    --success-light: #d1fae5;
+    --danger-color: #ef4444;
+    --danger-light: #fee2e2;
+    --warning-color: #f59e0b;
+    --warning-light: #fef3c7;
+    --info-color: #06b6d4;
+    --info-light: #cffafe;
+
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+
+    --font-thai: 'Sarabun', sans-serif;
+    --font-inter: 'Inter', sans-serif;
+
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+
+    --border-radius-sm: 6px;
+    --border-radius-md: 12px;
+    --border-radius-lg: 16px;
+    --border-radius-xl: 20px;
+
+    --transition-fast: all 0.15s ease;
+    --transition-normal: all 0.3s ease;
+    --transition-slow: all 0.5s ease;
+}
+
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    min-width: 0;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-thai);
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    color: var(--gray-800);
+    line-height: 1.7;
+    font-size: 16px;
+    overflow-x: hidden;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+        radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(16, 185, 129, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 40% 80%, rgba(245, 158, 11, 0.03) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: -1;
+}
+
+img,
+svg,
+canvas,
+table {
+    max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea,
+.nav-btn,
+.nav-btn-stock,
+.report-btn,
+.refresh-btn,
+.action-btn,
+.dialog-btn {
+    min-height: 44px;
+}
+
+/* ===== NAVBAR ===== */
+.navbar {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 1.1rem 0;
+    box-shadow: var(--shadow-lg);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    transition: var(--transition-normal);
+}
+
+.nav-container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.logo-icon {
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, var(--primary-color) 0%, #8b5cf6 100%);
+    border-radius: var(--border-radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-lg);
+    flex-shrink: 0;
+}
+
+.logo-icon i {
+    color: #fff;
+    font-size: 1.6rem;
+}
+
+.logo h1 {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.3;
+    font-family: var(--font-thai), var(--font-inter), sans-serif;
+    word-break: break-word;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.user-badge {
+    background: linear-gradient(135deg, var(--info-light) 0%, rgba(6, 182, 212, 0.1) 100%);
+    color: var(--info-color);
+    padding: 0.75rem 1rem;
+    border-radius: var(--border-radius-xl);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid rgba(6, 182, 212, 0.2);
+    box-shadow: var(--shadow-sm);
+}
+
+.nav-btn,
+.report-btn,
+.refresh-btn {
+    background: linear-gradient(135deg, var(--gray-600) 0%, var(--gray-700) 100%);
+    color: #fff;
+    padding: 0.8rem 1.25rem;
+    border: none;
+    border-radius: var(--border-radius-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-normal);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    font-size: 0.95rem;
+    box-shadow: var(--shadow-md);
+}
+
+.nav-btn.primary,
+.refresh-btn,
+.report-btn {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+}
+
+.nav-btn-stock {
+    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%) !important;
+    color: #ffffff !important;
+    border: 1px solid #1e3a8a !important;
+    box-shadow: 0 4px 6px -1px rgba(30, 58, 138, 0.2) !important;
+    transition: all 0.2s ease !important;
+}
+
+.nav-btn-stock i {
+    color: #ffffff !important;
+}
+
+.nav-btn-stock:hover {
+    background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px -2px rgba(30, 58, 138, 0.3) !important;
+}
+
+.nav-btn-stock:focus,
+.nav-btn-stock:active,
+.nav-btn-stock.active {
+    outline: none !important;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.4), 0 4px 6px -1px rgba(30, 58, 138, 0.2) !important;
+}
+
+/* ===== MAIN ===== */
+.main-container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem;
+    width: 100%;
+}
+
+.dashboard-header {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.dashboard-title {
+    color: var(--gray-800);
+    font-size: 2.3rem;
+    font-weight: 800;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    font-family: var(--font-thai), var(--font-inter), sans-serif;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, var(--gray-800) 0%, var(--primary-color) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    flex-wrap: wrap;
+}
+
+.dashboard-subtitle {
+    color: var(--gray-600);
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.public-notice,
+.report-section,
+.controls-section,
+.data-table,
+.chart-container,
+.stock-card,
+.low-stock-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-xl);
+}
+
+.public-notice {
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.public-notice h3 {
+    color: var(--info-color);
+    margin-bottom: 0.75rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+.public-notice p {
+    color: var(--gray-700);
+    font-size: 0.98rem;
+}
+
+/* ===== STATS ===== */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+    align-items: stretch;
+}
+
+.stat-card {
+    padding: 1.2rem 1rem;
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-xl);
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr);
+    gap: 0.9rem;
+    align-items: center;
+    min-height: 122px;
+    overflow: hidden;
+}
+
+.stat-icon {
+    width: 58px;
+    height: 58px;
+    border-radius: var(--border-radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    color: white;
+    box-shadow: var(--shadow-lg);
+    flex-shrink: 0;
+}
+
+.stat-icon.pending { background: linear-gradient(135deg, var(--warning-color) 0%, #d97706 100%); }
+.stat-icon.processing { background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%); }
+.stat-icon.completed { background: linear-gradient(135deg, var(--success-color) 0%, #059669 100%); }
+.stat-icon.cancelled { background: linear-gradient(135deg, var(--danger-color) 0%, #dc2626 100%); }
+.stat-icon.parts { background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); }
+.stat-icon.external { background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); }
+
+.stat-content {
+    min-width: 0;
+}
+
+.stat-content h3 {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--gray-800);
+    margin-bottom: 0.2rem;
+    line-height: 1;
+}
+
+.stat-content p {
+    color: var(--gray-600);
+    font-weight: 600;
+    font-size: 0.9rem;
+    line-height: 1.3;
+    word-break: break-word;
+    white-space: normal;
+}
+
+/* ===== REPORT / FILTER ===== */
+.report-section,
+.controls-section {
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.report-header,
+.controls-header,
+.stock-section-header,
+.table-header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.report-title,
+.controls-title,
+.chart-title,
+.table-title,
+.stock-section-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--gray-800);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: var(--font-thai), var(--font-inter), sans-serif;
+    line-height: 1.35;
+    flex-wrap: wrap;
+}
+
+.report-controls,
+.filter-controls {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    min-width: 170px;
+}
+
+.filter-label {
+    font-size: 0.9rem;
+    color: var(--gray-700);
+    font-weight: 600;
+}
+
+.month-selector,
+.tech-selector,
+.filter-select,
+.filter-input {
+    padding: 0.8rem 1rem;
+    border: 2px solid var(--gray-300);
+    border-radius: var(--border-radius-md);
+    font-size: 0.95rem;
+    background: white;
+    min-width: 170px;
+    font-family: var(--font-thai);
+    transition: var(--transition-normal);
+    box-shadow: var(--shadow-sm);
+}
+
+/* ===== CHART ===== */
+.chart-section {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem;
+    margin: 2rem 0;
+    align-items: stretch;
+}
+
+.chart-container {
+    padding: 1.35rem 1rem;
+    min-height: 360px;
+    overflow: hidden;
+}
+
+.chart-container.full-width {
+    grid-column: 1 / -1;
+}
+
+.chart-canvas-container {
+    position: relative;
+    height: 270px;
+    margin-top: 1rem;
+}
+
+.chart-no-data {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    color: var(--gray-500);
+    text-align: center;
+    height: 100%;
+    background: linear-gradient(135deg, var(--gray-50) 0%, rgba(243, 244, 246, 0.5) 100%);
+    border-radius: var(--border-radius-md);
+    border: 2px dashed var(--gray-300);
+}
+
+/* ===== STOCK SECTION ===== */
+.stock-section {
+    margin: 2rem 0;
+}
+
+.stock-section-subtitle {
+    color: var(--gray-500);
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.stock-grid {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1rem;
+    align-items: stretch;
+}
+
+.stock-card,
+.low-stock-card {
+    padding: 1rem;
+    min-height: 340px;
+    overflow: hidden;
+}
+
+.stock-card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--gray-800);
+    margin-bottom: 0.85rem;
+}
+
+.stock-chart-card .chart-canvas-container {
+    height: 245px;
+}
+
+.low-stock-summary {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+    margin-bottom: 0.85rem;
+}
+
+.low-stock-metric {
+    background: linear-gradient(135deg, #fff7ed 0%, #fffbeb 100%);
+    border: 1px solid #fed7aa;
+    border-radius: 14px;
+    padding: 0.9rem;
+}
+
+.low-stock-metric strong {
+    display: block;
+    font-size: 1.6rem;
+    line-height: 1;
+    color: #ea580c;
+    margin-bottom: 0.25rem;
+}
+
+.low-stock-metric span {
+    color: var(--gray-700);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.low-stock-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-right: 0.2rem;
+}
+
+.low-stock-item {
+    border: 1px solid #fde68a;
+    background: linear-gradient(135deg, #fffef2 0%, #fff7ed 100%);
+    border-radius: 14px;
+    padding: 0.85rem;
+}
+
+.low-stock-item-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.65rem;
+    margin-bottom: 0.35rem;
+}
+
+.low-stock-name {
+    font-weight: 700;
+    color: var(--gray-800);
+    line-height: 1.35;
+    font-size: 0.92rem;
+}
+
+.low-stock-badge {
+    white-space: nowrap;
+    background: #ef4444;
+    color: white;
+    border-radius: 999px;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.74rem;
+    font-weight: 700;
+}
+
+.low-stock-meta {
+    color: var(--gray-600);
+    font-size: 0.88rem;
+    line-height: 1.4;
+}
+
+.low-stock-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 180px;
+    border: 1px dashed var(--gray-300);
+    border-radius: 14px;
+    color: var(--gray-500);
+    text-align: center;
+    padding: 1rem;
+    background: var(--gray-50);
+}
+
+/* ===== TABLE ===== */
+.data-table {
+    overflow: hidden;
+}
+
+.table-header {
+    background: linear-gradient(135deg, var(--gray-50) 0%, rgba(243, 244, 246, 0.8) 100%);
+    padding: 1.25rem 1rem;
+    border-bottom: 2px solid var(--gray-200);
+}
+
+.table-container {
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    min-height: 0;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    table-layout: fixed;
+    word-break: break-word;
+}
+
+th {
+    padding: 0.95rem 0.7rem;
+    background: linear-gradient(135deg, var(--gray-100) 0%, var(--gray-50) 100%);
+    font-weight: 700;
+    color: var(--gray-800);
+    font-size: 0.84rem;
+    vertical-align: middle;
+    text-align: left;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 3px solid var(--primary-color);
+}
+
+th i {
+    margin-right: 0.4rem;
+    color: var(--primary-color);
+    font-size: 0.92rem;
+}
+
+td {
+    padding: 0.95rem 0.7rem;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+    vertical-align: middle;
+    color: var(--gray-700);
+    font-size: 0.88rem;
+}
+
+tr:hover td {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.03) 0%, rgba(16, 185, 129, 0.03) 100%);
+}
+
+th:nth-child(1) { width: 8%; }
+th:nth-child(2) { width: 10%; }
+th:nth-child(3) { width: 12%; }
+th:nth-child(4) { width: 16%; }
+th:nth-child(5) { width: 15%; }
+th:nth-child(6) { width: 12%; }
+th:nth-child(7) { width: 15%; }
+th:nth-child(8) { width: 12%; }
+
+.table-repair-item,
+.table-location,
+.table-requester,
+.table-row-number,
+.table-date,
+.table-technician {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    text-align: left;
+}
+
+.table-repair-item > div,
+.table-location > div,
+.table-requester > div {
+    min-width: 0;
+    white-space: normal;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.table-row-number {
+    justify-content: flex-start;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.table-date {
+    font-weight: 600;
+    color: var(--gray-600);
+}
+
+.status-badge {
+    padding: 0.35rem 0.75rem;
+    border-radius: var(--border-radius-xl);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-align: center;
+    white-space: normal;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    line-height: 1.25;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid transparent;
+    min-width: 76px;
+    max-width: 100%;
+}
+
+.status-pending {
+    background: linear-gradient(135deg, var(--warning-light) 0%, rgba(245, 158, 11, 0.1) 100%);
+    color: var(--warning-color);
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+.status-processing {
+    background: linear-gradient(135deg, var(--primary-light) 0%, rgba(59, 130, 246, 0.1) 100%);
+    color: var(--primary-color);
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.status-parts {
+    background: linear-gradient(135deg, #f3e8ff 0%, rgba(139, 92, 246, 0.1) 100%);
+    color: #7c3aed;
+    border-color: rgba(139, 92, 246, 0.3);
+}
+
+.status-completed {
+    background: linear-gradient(135deg, var(--success-light) 0%, rgba(16, 185, 129, 0.1) 100%);
+    color: var(--success-color);
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.status-cancelled {
+    background: linear-gradient(135deg, var(--danger-light) 0%, rgba(239, 68, 68, 0.1) 100%);
+    color: var(--danger-color);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.status-external {
+    background: linear-gradient(135deg, #cffafe 0%, rgba(6, 182, 212, 0.1) 100%);
+    color: #0891b2;
+    border-color: rgba(6, 182, 212, 0.3);
+}
+
+.actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+    gap: 0.5rem;
+}
+
+.action-btn {
+    padding: 0.55rem 0.75rem;
+    border: none;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-normal);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    font-family: var(--font-thai);
+    white-space: normal;
+    min-width: 0;
+    width: 100%;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+    line-height: 1.25;
+}
+
+.action-btn.view,
+.action-btn.info {
+    background: linear-gradient(135deg, var(--info-light) 0%, rgba(6, 182, 212, 0.1) 100%);
+    color: var(--info-color);
+    border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+.action-btn.edit,
+.action-btn.assign {
+    background: linear-gradient(135deg, var(--success-light) 0%, rgba(16, 185, 129, 0.1) 100%);
+    color: var(--success-color);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.action-btn.delete {
+    background: linear-gradient(135deg, var(--danger-light) 0%, rgba(239, 68, 68, 0.1) 100%);
+    color: var(--danger-color);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.action-btn.images {
+    background: linear-gradient(135deg, #f3e8ff 0%, rgba(139, 92, 246, 0.1) 100%);
+    color: #8b5cf6;
+    border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.action-btn:disabled {
+    background: var(--gray-200) !important;
+    color: var(--gray-500) !important;
+    cursor: not-allowed;
+    box-shadow: none !important;
+    border-color: var(--gray-300) !important;
+}
+
+.image-count-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: linear-gradient(135deg, var(--danger-color) 0%, #dc2626 100%);
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    border: 2px solid white;
+    box-shadow: var(--shadow-md);
+}
+
+/* ===== DIALOG / MODAL ===== */
+.dialog-overlay,
+#selfTestModal.dialog-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.84);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 20000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.dialog-overlay.active,
+#selfTestModal.active {
+    display: flex !important;
+}
+
+.dialog {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.92) 100%);
+    border-radius: var(--border-radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-2xl);
+    width: min(92vw, 560px);
+    max-height: 88vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.dialog-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--gray-800);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.dialog-subtitle {
+    font-size: 0.96rem;
+    color: var(--gray-600);
+    margin-bottom: 1.5rem;
+}
+
+.dialog .form-group {
+    margin-bottom: 1rem;
+}
+
+.dialog .form-label {
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+    display: block;
+}
+
+.dialog .form-select,
+.dialog .form-textarea {
+    width: 100%;
+    padding: 0.9rem 1rem;
+    border: 2px solid var(--gray-300);
+    border-radius: var(--border-radius-md);
+    font-size: 0.95rem;
+    font-family: var(--font-thai);
+    background: white;
+}
+
+.dialog-buttons {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--gray-200);
+    flex-wrap: wrap;
+}
+
+.dialog-btn {
+    padding: 0.8rem 1.25rem;
+    border: none;
+    border-radius: var(--border-radius-md);
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--font-thai);
+    font-size: 0.95rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    box-shadow: var(--shadow-md);
+}
+
+.dialog-btn.cancel {
+    background: linear-gradient(135deg, white 0%, var(--gray-50) 100%);
+    color: var(--gray-700);
+    border: 2px solid var(--gray-300);
+}
+
+.dialog-btn.primary {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    color: white;
+}
+
+.dialog-btn.danger {
+    background: linear-gradient(135deg, var(--danger-color) 0%, #dc2626 100%);
+    color: white;
+}
+
+.image-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.image-modal.active {
+    display: flex;
+}
+
+.image-modal .modal-content {
+    position: relative;
+    max-width: 92%;
+    max-height: 92%;
+    background: white;
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-2xl);
+}
+
+.image-modal .modal-close {
+    position: absolute;
+    top: 0.9rem;
+    right: 0.9rem;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 46px;
+    height: 46px;
+    cursor: pointer;
+    z-index: 10001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+.image-modal .modal-image {
+    width: 100%;
+    height: auto;
+    max-height: 82vh;
+    object-fit: contain;
+    display: block;
+}
+
+.image-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.image-item {
+    position: relative;
+    border-radius: var(--border-radius-md);
+    overflow: hidden;
+    background: var(--gray-100);
+    aspect-ratio: 1;
+    cursor: pointer;
+    border: 2px solid var(--gray-200);
+    box-shadow: var(--shadow-md);
+}
+
+.image-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: calc(var(--border-radius-md) - 2px);
+    transition: all 0.4s ease;
+    opacity: 0;
+}
+
+.image-item img.loaded {
+    opacity: 1;
+}
+
+.image-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+    color: white;
+    padding: 0.8rem;
+    font-size: 0.86rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+/* ===== MISC ===== */
+.loading,
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    text-align: center;
+}
+
+.spinner {
+    width: 44px;
+    height: 44px;
+    border: 4px solid var(--gray-200);
+    border-top: 4px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    100% { transform: rotate(360deg); }
+}
+
+footer {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+    backdrop-filter: blur(20px);
+    border-top: 2px solid var(--gray-200);
+    padding: 2rem 0;
+    margin-top: 3rem;
+    box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.05);
+}
+
+footer p {
+    max-width: 1600px;
+    margin: 0 auto;
+    text-align: center;
+    color: var(--gray-600);
+    padding: 0 1rem;
+    font-size: 0.92rem;
+    line-height: 1.6;
+}
+
+.gl-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, .45);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.gl-card {
+    width: min(420px, 92vw);
+    background: linear-gradient(135deg, rgba(255,255,255,.95), rgba(255,255,255,.9));
+    border: 1px solid rgba(255,255,255,.35);
+    border-radius: 18px;
+    box-shadow: 0 30px 90px rgba(0,0,0,.22);
+    padding: 18px;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+}
+
+.gl-spinner {
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    border: 4px solid rgba(59,130,246,.18);
+    border-top-color: rgba(59,130,246,.95);
+    animation: glSpin 0.85s linear infinite;
+    flex: 0 0 auto;
+}
+
+@keyframes glSpin {
+    to { transform: rotate(360deg); }
+}
+
+.gl-title {
+    font-weight: 700;
+    font-size: 1.02rem;
+    color: #0f172a;
+    font-family: 'Sarabun', sans-serif;
+}
+
+.gl-sub {
+    font-size: .9rem;
+    color: #475569;
+    margin-top: 4px;
+    font-family: 'Sarabun', sans-serif;
+}
+
+#terminalLog {
+    background: #020617 !important;
+    color: #10b981 !important;
+    padding: 1rem;
+    border-radius: 12px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: clamp(12px, 2.8vw, 14px);
+    max-height: min(55vh, 520px);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 0 1rem;
+    line-height: 1.8;
+    border: 1px solid #1e293b;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* ===== FLOATING TOAST ALERT ===== */
+.alert {
+    position: fixed;
+    top: 88px;
+    right: 20px;
+    z-index: 3000;
+
+    display: none;
+    align-items: center;
+    gap: 0.75rem;
+
+    padding: 0.9rem 1rem;
+    border-radius: 16px;
+
+    font-weight: 600;
+    font-size: 0.95rem;
+
+    width: min(420px, calc(100vw - 32px));
+
+    box-shadow: 0 18px 40px rgba(15,23,42,0.16);
+    border: 1px solid transparent;
+
+    backdrop-filter: blur(14px);
+}
+
+.alert.show {
+    display: inline-flex;
+    animation: toastSlideInDesktop .32s ease-out forwards;
+}
+
+/* colors */
+
+.alert.success {
+    background: linear-gradient(135deg,#ecfdf5,#d1fae5);
+    color: #047857;
+}
+
+.alert.error {
+    background: linear-gradient(135deg,#fef2f2,#fee2e2);
+    color: #b91c1c;
+}
+
+.alert.info {
+    background: linear-gradient(135deg,#ecfeff,#cffafe);
+    color: #0f766e;
+}
+
+/* icon */
+
+.alert-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    background: rgba(255,255,255,0.7);
+    font-size: 0.9rem;
+}
+
+/* count badge */
+
+.alert-count {
+    background: white;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-weight: 800;
+    margin: 0 4px;
+}
+
+/* animation */
+
+@keyframes toastSlideInDesktop {
+    from {
+        opacity:0;
+        transform:translateY(-8px) translateX(10px);
+    }
+    to {
+        opacity:1;
+        transform:translateY(0) translateX(0);
+    }
+}
+
+/* ===== MOBILE ===== */
+
+@media (max-width:768px){
+
+    .alert{
+        top:76px;
+        left:12px;
+        right:12px;
+        width:auto;
+    }
+
+    .alert.show{
+        animation:toastSlideInMobile .28s ease-out forwards;
+    }
+
+}
+
+@keyframes toastSlideInMobile{
+    from{
+        opacity:0;
+        transform:translateY(-10px);
+    }
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
+}
+
+/* ===== RESPONSIVE ===== */
+@media (min-width: 1400px) {
+    .main-container {
+        max-width: 1600px;
+        padding: 2.5rem 2rem;
+    }
+}
+
+@media (max-width: 1199px) {
+    .stats-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .chart-section {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .stock-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .low-stock-card,
+    .chart-container.full-width,
+    .chart-container:last-child {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 992px) {
+    .nav-container {
+        padding: 0 1rem;
+    }
+
+    .main-container {
+        padding: 1.5rem 1rem;
+    }
+
+    .dashboard-title {
+        font-size: 2rem;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .chart-section,
+    .stock-grid {
+        gap: 1rem;
+    }
+
+    .chart-container,
+    .report-section,
+    .controls-section {
+        padding: 1.15rem 1rem;
+    }
+
+    .report-header,
+    .controls-header,
+    .report-controls,
+    .filter-controls {
+        align-items: stretch;
+    }
+}
+
+@media (max-width: 768px) {
+    .navbar {
+        padding: 0.9rem 0;
+    }
+
+    .nav-container {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+        gap: 0.8rem;
+    }
+
+    .logo {
+        width: 100%;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .logo h1 {
+        font-size: 1rem;
+    }
+
+    .user-info {
+        width: 100%;
+        justify-content: stretch;
+        gap: 0.65rem;
+    }
+
+    .user-badge,
+    .nav-btn,
+    .nav-btn-stock,
+    .report-btn,
+    .refresh-btn {
+        width: 100%;
+        max-width: 100%;
+        justify-content: center;
+    }
+
+    .main-container {
+        padding: 1rem 0.7rem 1.25rem;
+    }
+
+    .dashboard-header {
+        margin-bottom: 1.5rem;
+    }
+
+    .dashboard-title {
+        font-size: 1.55rem;
+        gap: 0.7rem;
+    }
+
+    .dashboard-subtitle {
+        font-size: 0.92rem;
+    }
+
+    .stats-grid,
+    .chart-section,
+    .stock-grid,
+    .filter-controls,
+    .report-controls {
+        grid-template-columns: 1fr;
+        gap: 0.9rem;
+    }
+
+    .stat-card {
+        grid-template-columns: 50px minmax(0, 1fr);
+        gap: 0.75rem;
+        min-height: 108px;
+        padding: 1rem 0.85rem;
+        text-align: left;
+    }
+
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.15rem;
+    }
+
+    .stat-content h3 {
+        font-size: 1.7rem;
+    }
+
+    .stat-content p {
+        font-size: 0.85rem;
+    }
+
+    .chart-container,
+    .stock-card,
+    .low-stock-card,
+    .report-section,
+    .controls-section,
+    .data-table {
+        padding: 1rem 0.85rem;
+        border-radius: 16px;
+    }
+
+    .chart-container {
+        min-height: 300px;
+    }
+
+    .chart-canvas-container,
+    .stock-chart-card .chart-canvas-container {
+        height: 220px;
+    }
+
+    .chart-title,
+    .controls-title,
+    .report-title,
+    .table-title,
+    .stock-section-title {
+        font-size: 1.02rem;
+    }
+
+    .filter-group,
+    .filter-select,
+    .month-selector,
+    .tech-selector,
+    .filter-input {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .table-header {
+        padding: 1rem 0.85rem;
+    }
+
+    .table-container {
+        overflow: visible;
+        background: transparent;
+    }
+
+    #dataTable,
+    #dataTable thead,
+    #dataTable tbody,
+    #dataTable th,
+    #dataTable td,
+    #dataTable tr {
+        display: block;
+        width: 100%;
+    }
+
+    #dataTable thead {
+        display: none;
+    }
+
+    #dataTable tbody {
+        display: grid;
+        gap: 0.85rem;
+        padding: 0.85rem;
+    }
+
+    #dataTable tr {
+        background: #ffffff;
+        border: 1px solid var(--gray-200);
+        border-radius: 16px;
+        box-shadow: var(--shadow-md);
+        padding: 0.8rem;
+        margin-bottom: 0;
+    }
+
+    #dataTable td {
+        border: none;
+        padding: 0.55rem 0;
+        text-align: left;
+        display: block;
+    }
+
+    #dataTable td::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: 0.25rem;
+        color: var(--gray-500);
+        font-size: 0.78rem;
+        font-weight: 700;
+        line-height: 1.3;
+    }
+
+    .table-row-number,
+    .table-date,
+    .table-requester,
+    .table-repair-item,
+    .table-location,
+    .table-technician {
+        justify-content: flex-start;
+        gap: 0.45rem;
+        align-items: flex-start;
+        text-align: left;
+        width: 100%;
+    }
+
+    .actions {
+        grid-template-columns: 1fr;
+        gap: 0.45rem;
+    }
+
+    .action-btn {
+        font-size: 0.82rem;
+        padding: 0.65rem 0.75rem;
+    }
+
+    .status-badge {
+        width: fit-content;
+        max-width: 100%;
+    }
+
+    #paginationControls,
+    .pager {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.7rem !important;
+        padding: 0.85rem !important;
+    }
+
+    #paginationControls > div {
+        width: 100%;
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5rem;
+    }
+
+    .dialog {
+        width: min(100vw - 16px, 100%);
+        max-height: 88vh;
+        padding: 1rem;
+        border-radius: 16px;
+    }
+
+    .dialog-buttons {
+        flex-direction: column;
+    }
+
+    .dialog-btn {
+        width: 100%;
+    }
+
+    .image-gallery,
+    .image-grid,
+    #galleryGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.75rem;
+    }
+}
+
+@media (max-width: 390px) {
+    .main-container {
+        padding: 0.85rem 0.5rem 1rem;
+    }
+
+    .dashboard-title {
+        font-size: 1.35rem;
+    }
+
+    .dashboard-subtitle {
+        font-size: 0.88rem;
+    }
+
+    .stat-card {
+        grid-template-columns: 44px minmax(0, 1fr);
+        gap: 0.65rem;
+        min-height: 98px;
+        padding: 0.85rem 0.75rem;
+    }
+
+    .stat-icon {
+        width: 44px;
+        height: 44px;
+        font-size: 1rem;
+    }
+
+    .stat-content h3 {
+        font-size: 1.45rem;
+    }
+
+    .stat-content p {
+        font-size: 0.8rem;
+    }
+
+    .chart-canvas-container,
+    .stock-chart-card .chart-canvas-container {
+        height: 205px;
+    }
+
+    .chart-container,
+    .stock-card,
+    .low-stock-card,
+    .report-section,
+    .controls-section,
+    .data-table {
+        padding: 0.9rem 0.75rem;
+    }
+
+    .image-gallery,
+    .image-grid,
+    #galleryGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 320px) {
+    .main-container {
+        padding: 0.75rem 0.45rem 0.95rem;
+    }
+
+    .logo h1 {
+        font-size: 0.94rem;
+    }
+
+    .dashboard-title {
+        font-size: 1.2rem;
+    }
+
+    .chart-canvas-container,
+    .stock-chart-card .chart-canvas-container {
+        height: 190px;
+    }
+
+    .nav-btn,
+    .nav-btn-stock,
+    .report-btn,
+    .refresh-btn,
+    .action-btn,
+    .dialog-btn {
+        font-size: 0.78rem;
+    }
+
+    .chart-container,
+    .stock-card,
+    .low-stock-card,
+    .report-section,
+    .controls-section,
+    .data-table {
+        padding: 0.8rem 0.65rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
+}
+</style>
+</head>
+<body>
+
+<div id="alertMessage" class="alert"></div>
+
+<!-- Navigation -->
+<nav class="navbar">
+    <div class="nav-container">
+        <div class="logo">
+            <div class="logo-icon">
+                <i class="fas fa-tachometer-alt"></i>
+            </div>
+            <h1>แดชบอร์ดระบบแจ้งซ่อม</h1>
+        </div>
+
+        <!-- [ANCHOR: CLIENT-DASHBOARD-NAVBAR-USER-INFO] -->
+        <div class="user-info">
+            <div class="user-badge" id="userBadge">
+                <i class="fas fa-users"></i>
+                <span id="userName">เข้าถึงสาธารณะ</span>
+            </div>
+
+            <a
+                href="javascript:void(0);"
+                class="nav-btn nav-btn-stock active"
+                id="navStockBtn"
+                onclick="navigateToPage('stock')"
+                style="display: none;"
+                title="ไปยังหน้าสต็อกอะไหล่"
+                aria-current="page"
+            >
+                <i class="fas fa-boxes-stacked"></i>
+                หน้าสต็อก
+            </a>
+
+            <a href="javascript:void(0);" class="nav-btn" onclick="navigateToPage('index')">
+                <i class="fas fa-home"></i>
+                หน้าหลัก
+            </a>
+        </div>
+    </div>
+</nav>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Public Notice -->
+        <div class="public-notice" id="publicNotice">
+            <h3><i class="fas fa-info-circle"></i> ระบบเปิดให้เข้าถึงสาธารณะ</h3>
+            <p>ทุกท่านสามารถดูข้อมูลและแดชบอร์ดได้โดยไม่ต้องเข้าสู่ระบบ สำหรับการจัดการข้อมูลกรุณาเข้าสู่ระบบด้วยบัญชีผู้ดูแล</p>
+        </div>
+
+               <!-- Alert Messages -->
+        <div id="alertSuccess" class="alert success">
+            <i class="fas fa-check-circle"></i>
+            <span id="successMessage"></span>
+        </div>
+
+        <div id="alertError" class="alert error">
+            <i class="fas fa-exclamation-circle"></i>
+            <span id="errorMessage"></span>
+        </div>
+
+        <div id="alertInfo" class="alert info">
+            <i class="fas fa-info-circle"></i>
+            <span id="infoMessage"></span>
+        </div>
+
+        <!-- Dashboard Header -->
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">
+                <i class="fas fa-chart-line"></i>
+                แดชบอร์ด ระบบแจ้งซ่อม
+            </h1>
+            <p class="dashboard-subtitle">จัดการและติดตามรายการแจ้งซ่อมทั้งหมด</p>
+        </div>
+
+        <!-- Statistics -->
+<div class="stats-grid" id="statsGrid">
+    <div class="stat-card floating">
+        <!-- 🍓 BERRY FIX: เปลี่ยน state-icon เป็น stat-icon -->
+        <div class="stat-icon pending pulse">
+            <i class="fas fa-clock"></i>
+        </div>
+        <div class="stat-content">
+            <!-- 🍓 BERRY FIX: เปลี่ยน div เป็น h3 และ p เพื่อรับ CSS ความสวยงาม -->
+            <h3 id="pendingCount">0</h3>
+            <p>รอดำเนินการ</p>
+        </div>
+    </div>
+    
+    <div class="stat-card floating" style="animation-delay: 0.2s;">
+        <div class="stat-icon processing">
+            <i class="fas fa-cog fa-spin"></i>
+        </div>
+        <div class="stat-content">
+            <h3 id="processingCount">0</h3>
+            <p>กำลังดำเนินการ</p>
+        </div>
+    </div>
+
+   <div class="stat-card floating" style="animation-delay: 0.25s;">
+        <div class="stat-icon external">
+            <i class="fas fa-truck-fast"></i>
+        </div>
+        <div class="stat-content">
+            <h3 id="externalCount">0</h3>
+            <p>ดำเนินการภายนอก</p>
+        </div>
+    </div>
+
+    <div class="stat-card floating" style="animation-delay: 0.3s;">
+        <div class="stat-icon parts">
+            <i class="fas fa-box-open"></i>
+        </div>
+        <div class="stat-content">
+            <h3 id="partsCount">0</h3>
+            <p>รอเบิกพัสดุ</p>
+        </div>
+    </div>
+    
+    <div class="stat-card floating" style="animation-delay: 0.4s;">
+        <div class="stat-icon completed">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="stat-content">
+            <h3 id="completedCount">0</h3>
+            <p>เสร็จสิ้น</p>
+        </div>
+    </div>
+    
+    <div class="stat-card floating" style="animation-delay: 0.6s;">
+        <div class="stat-icon cancelled">
+            <i class="fas fa-times-circle"></i>
+        </div>
+        <div class="stat-content">
+            <h3 id="cancelledCount">0</h3>
+            <p>ยกเลิก</p>
+        </div>
+    </div>
+</div>
+
+      <!-- Monthly Report Section -->
+<div class="report-section" id="reportSection">
+    <div class="report-header">
+        <h2 class="report-title">
+            <i class="fas fa-chart-line dashboard-icon"></i>
+            รายงานสรุปรายเดือน
+        </h2>
+       <div class="report-controls">
+            <select id="monthSelector" class="month-selector">
+                <option value="">เลือกเดือน...</option>
+            </select>
+            <!-- เพิ่มช่องเลือกผู้รับผิดชอบ -->
+            <select id="reportTechnicianSelector" class="tech-selector" disabled>
+                <option value="">-- รวมทุกคน --</option>
+            </select>
+            <button class="report-btn" id="generateReportBtn" onclick="generateMonthlyReport()" disabled>
+                <i class="fas fa-file-alt"></i>
+                สร้างรายงาน
+            </button>
+            <button class="report-btn" id="downloadReportBtn" onclick="downloadLastReport()" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); display: none;">
+                <i class="fas fa-download"></i>
+                ดาวน์โหลด
+            </button>
+        </div>
+    </div>
+    
+    <div id="reportPreview" style="display: none;">
+        <div class="report-preview-content">
+            <!-- Report preview will be inserted here -->
+        </div>
+    </div>
+</div>
+
+        <!-- [ANCHOR: DASHBOARD-CHART-SECTION-REPAIR-ONLY] -->
+<div class="chart-section">
+    <div class="chart-container technician-chart-card">
+        <h3 class="chart-title">
+            <i class="fas fa-chart-pie"></i>
+            สถิติตามสถานะ
+        </h3>
+        <div class="chart-canvas-container">
+            <canvas id="statusChart"></canvas>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <h3 class="chart-title">
+            <i class="fas fa-chart-bar"></i>
+            สถิติตามประเภทงานซ่อม
+        </h3>
+        <div class="chart-canvas-container">
+            <canvas id="repairTypeChart"></canvas>
+        </div>
+    </div>
+
+   <!-- [ANCHOR: DASHBOARD-TECHNICIAN-CANVAS] -->
+<div class="chart-container technician-chart-card">
+    <h3 class="chart-title">
+        <i class="fas fa-user-cog"></i>
+        จำนวนงานที่รับผิดชอบทั้งหมด
+    </h3>
+    <div class="chart-canvas-container">
+        <canvas id="technicianChart"></canvas>
+    </div>
+</div>
+</div>
+
+<!-- [ANCHOR: DASHBOARD-STOCK-SECTION-BOTTOM] -->
+<div class="stock-section">
+    <div class="stock-section-header">
+        <div>
+            <h2 class="stock-section-title">
+                <i class="fas fa-boxes-stacked"></i>
+                สถานะสต็อกอะไหล่
+            </h2>
+            <div class="stock-section-subtitle">ภาพรวมอะไหล่คงเหลือ การเคลื่อนไหว และรายการที่ต้องเฝ้าระวัง</div>
+        </div>
+    </div>
+
+    <div class="stock-grid">
+        <div class="stock-card low-stock-card">
+            <div class="stock-card-title">
+                <i class="fas fa-triangle-exclamation"></i>
+                Low Stock Alert
+            </div>
+
+            <div class="low-stock-summary">
+                <div class="low-stock-metric">
+                    <strong id="lowStockCount">0</strong>
+                    <span>รายการใกล้หมด</span>
+                </div>
+            </div>
+
+            <div id="lowStockList" class="low-stock-list">
+                <div class="low-stock-empty">ยังไม่มีรายการอะไหล่ใกล้หมด</div>
+            </div>
+        </div>
+
+        <div class="stock-card stock-chart-card">
+            <div class="stock-card-title">
+                <i class="fas fa-chart-column"></i>
+                คงเหลือปัจจุบัน
+            </div>
+            <div class="chart-canvas-container">
+                <canvas id="currentStockChart"></canvas>
+            </div>
+        </div>
+
+        <div class="stock-card stock-chart-card">
+            <div class="stock-card-title">
+                <i class="fas fa-right-left"></i>
+                รับเข้า vs เบิกออก
+            </div>
+            <div class="chart-canvas-container">
+                <canvas id="stockMovementChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+        <!-- Controls Section -->
+        <div class="controls-section">
+            <div class="controls-header">
+                <h2 class="controls-title">
+                    <i class="fas fa-filter"></i>
+                    ตัวกรองและการจัดการ
+                </h2>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <button id="btnTestSystem" class="btn" onclick="runFullSystemTest()" style="background: #059669; color: white; border: none; box-shadow: 0 2px 5px rgba(0,0,0,0.15); display: inline-flex; align-items: center; gap: 8px; cursor: pointer;">
+    <i class="fas fa-satellite-dish"></i> ทดสอบระบบ (Full Test)
+</button>
+
+<div id="selfTestModal" class="dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="selfTestTitle" aria-hidden="true">
+      <div class="dialog" role="document" tabindex="-1">
+        <h3 class="dialog-title" id="selfTestTitle">
+          <i class="fas fa-terminal" style="color:var(--primary-color);"></i> Terminal System Test
+        </h3>
+
+        <div id="terminalLog">
+          [Ready] รอการเริ่มทดสอบ...
+        </div>
+
+        <div class="dialog-buttons">
+          <button id="btnCopyTerminal" type="button" class="dialog-btn" onclick="copyTerminalLog()" style="background: #475569; color: white;">
+            <i class="fas fa-copy"></i> คัดลอก Log
+          </button>
+
+          <button id="btnCloseSelfTest" type="button" class="dialog-btn cancel" onclick="closeSelfTestModal()" style="cursor: pointer; position: relative; z-index: 10;">
+            <i class="fas fa-times"></i> ปิดหน้าต่าง
+          </button>
+        </div>
+      </div>
+    </div>
+
+                    <button id="btnDebugImage" class="refresh-btn" onclick="debugImageData()" style="background: #7c2d12; display: none;">
+                        <i class="fas fa-bug"></i>
+                        Debug ภาพ
+                    </button>
+
+                    <button class="refresh-btn" onclick="loadData()">
+                        <i class="fas fa-sync-alt"></i>
+                        รีเฟรช
+                    </button>
+                </div>
+            </div>
+            
+            <div class="filter-controls">
+                <div class="filter-group">
+                    <label class="filter-label">สถานะ</label>
+                    <select id="statusFilter" class="filter-select" onchange="applyFilters()">
+                        <option value="">ทั้งหมด</option>
+                        <option value="รอดำเนินการ">รอดำเนินการ</option>
+                        <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
+                          <option value="ดำเนินการภายนอก">ดำเนินการภายนอก</option>
+                        <option value="พัสดุอยู่ระหว่างรอเบิก">พัสดุอยู่ระหว่างรอเบิก</option>
+                        <option value="เสร็จสิ้น">เสร็จสิ้น</option>
+                        <option value="ยกเลิก">ยกเลิก</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">ความเร่งด่วน</label>
+                    <select id="priorityFilter" class="filter-select" onchange="applyFilters()">
+                        <option value="">ทั้งหมด</option>
+                        <option value="ปานกลาง">ปานกลาง</option>
+                        <option value="เร่งด่วน">เร่งด่วน</option>
+                        <option value="ฉุกเฉิน">ฉุกเฉิน</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">ประเภทงาน</label>
+                    <select id="typeFilter" class="filter-select" onchange="applyFilters()">
+                        <option value="">ทั้งหมด</option>
+                        <option value="ทั่วไป">ทั่วไป</option>
+                        <option value="ไฟฟ้า">ไฟฟ้า</option>
+                        <option value="ประปา">ประปา</option>
+                        <option value="แอร์">แอร์</option>
+                        <option value="คอมพิวเตอร์">คอมพิวเตอร์</option>
+                        <option value="เครื่องใช้ไฟฟ้า">เครื่องใช้ไฟฟ้า</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="data-table">
+            <div class="table-header">
+                <h2 class="table-title">
+                    <i class="fas fa-table"></i>
+                    รายการแจ้งซ่อมทั้งหมด
+                </h2>
+            </div>
+            
+            <div class="table-container">
+                <div id="loadingState" class="loading">
+                    <div class="spinner"></div>
+                    <p>กำลังโหลดข้อมูล...</p>
+                </div>
+                
+                <div id="emptyState" class="empty-state" style="display: none;">
+                    <div class="empty-icon">
+                        <i class="fas fa-inbox"></i>
+                    </div>
+                    <h3>ไม่พบข้อมูล</h3>
+                    <p>ยังไม่มีรายการแจ้งซ่อมในระบบ</p>
+                </div>
+                
+                <table id="dataTable" style="display: none;">
+                    <thead>
+                        <tr id="tableHeader">
+                            </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                    </tbody>
+                </table>
+            </div> <div id="paginationControls" style="display: none; justify-content: flex-end; align-items: center; gap: 1rem; padding: 1rem; border-top: 1px solid #e5e7eb; background: #fff; border-radius: 0 0 16px 16px;">
+                <span id="pageInfo" style="color: #6b7280; font-size: 0.9rem; font-weight: 500;"></span>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button id="btnPrevPage" onclick="changePage(-1)" class="action-btn" style="min-width: 80px; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; justify-content: center;">
+                        <i class="fas fa-chevron-left" style="margin-right: 5px;"></i> ก่อนหน้า
+                    </button>
+                    <button id="btnNextPage" onclick="changePage(1)" class="action-btn" style="min-width: 80px; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; justify-content: center;">
+                        ถัดไป <i class="fas fa-chevron-right" style="margin-left: 5px;"></i>
+                    </button>
+                </div>
+            </div>
+
+        </div> 
+
+    <!-- Image Modal -->
+    <div class="image-modal" id="imageModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeImageModal()">
+                <i class="fas fa-times"></i>
+            </button>
+            <img id="modalImage" class="modal-image" src="" alt="ภาพประกอบ">
+        </div>
+    </div>
+
+        <!-- ================= MODALS FOR ACTIONS ================= -->
+
+<!-- Edit Status Modal -->
+<div id="editModal" class="dialog-overlay">
+    <div class="dialog">
+        <h3 class="dialog-title"><i class="fas fa-edit"></i> แก้ไขสถานะการแจ้งซ่อม</h3>
+        <p class="dialog-subtitle">เลขที่: <strong id="editSequenceNumber"></strong></p>
+        <form id="editForm">
+            <input type="hidden" id="editHiddenSequenceNumber" name="sequenceNumber">
+          <div class="form-group">
+                <label for="editStatus" class="form-label">สถานะ <span class="required">*</span></label>
+                <select id="editStatus" name="status" class="form-select" required>
+                    <option value="รอดำเนินการ">รอดำเนินการ</option>
+                    <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
+                     <option value="ดำเนินการภายนอก">ดำเนินการภายนอก</option>
+                    <option value="พัสดุอยู่ระหว่างรอเบิก">พัสดุอยู่ระหว่างรอเบิก</option>
+                    <option value="เสร็จสิ้น">เสร็จสิ้น</option>
+                    <option value="ยกเลิก">ยกเลิก</option>
+                </select>
+            </div>
+
+           <!-- เพิ่มช่องลงวันที่/เวลาอัปเดต -->
+            <div class="form-group">
+                <label for="editUpdateDate" class="form-label">วันที่และเวลาดำเนินการ <span class="required">*</span></label>
+                <input type="text" id="editUpdateDate" name="updateDate" class="form-input" placeholder="วว/ดด/ปปปป HH:mm" required>
+                <p style="font-size: 0.85rem; color: var(--gray-500); margin-top: 0.4rem;">* ระบบตั้งเป็นเวลาปัจจุบัน สามารถแก้ตัวเลขเพื่อบันทึกย้อนหลังได้ (เช่น 07/03/2569 13:30)</p>
+            </div>
+
+              <div class="form-group"> 
+    <label class="form-label">
+        <i class="fas fa-images"></i> รูปภาพประกอบ (แนบเพิ่มเติมได้ทุกสถานะ)
+    </label>
+                <div class="edit-upload-area" onclick="document.getElementById('editImageInput').click()">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p style="font-size: 0.9rem; color: var(--gray-500); margin: 0;">คลิกเพื่อแนบรูป (สูงสุด 3 รูป)</p>
+                </div>
+                <input type="file" id="editImageInput" multiple accept="image/*" style="display: none;" onchange="handleEditImageSelect(this)">
+                <div id="editImagePreview" class="edit-upload-preview"></div>
+            </div> <div class="form-group">
+                <label for="editNotes" class="form-label">หมายเหตุ</label>
+                <textarea id="editNotes" name="notes" class="form-textarea" rows="3" placeholder="เพิ่มหมายเหตุการดำเนินการ..."></textarea>
+            </div>
+
+            <div class="dialog-buttons">
+                <button type="button" class="dialog-btn cancel" onclick="closeEditModal()">ยกเลิก</button>
+                <button type="submit" class="dialog-btn primary" id="saveChangesBtn">
+                    <i class="fas fa-save"></i> บันทึกการเปลี่ยนแปลง
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+                  <!-- Assign Technician Modal (ฉบับแก้ไข UI) -->
+<div id="assignModal" class="dialog-overlay">
+    <div class="dialog">
+        <h3 class="dialog-title"><i class="fas fa-user-plus"></i> มอบหมายงาน</h3>
+        <p class="dialog-subtitle">เลขที่: <strong id="assignSequenceNumber"></strong></p>
+        
+        <form id="assignForm">
+            <input type="hidden" id="assignHiddenSequenceNumber" name="sequenceNumber">
+
+            <div class="form-group">
+                <label for="assignTechnician" class="form-label">มอบหมายให้ช่าง <span class="required">*</span></label>
+                <select id="assignTechnician" name="technician" class="form-select" required>
+                    <!-- ตัวเลือกจะถูกสร้างโดย JavaScript -->
+                </select>
+            </div>
+
+            <div class="dialog-buttons">
+                <button type="button" class="dialog-btn cancel" onclick="closeAssignModal()">ยกเลิก</button>
+                <button type="submit" class="dialog-btn primary" id="saveAssignmentBtn">
+                    <i class="fas fa-check"></i> ยืนยันการมอบหมาย
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+            <!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="dialog-overlay">
+    <div class="dialog">
+        <h3 class="dialog-title" style="color: #dc2626;"><i class="fas fa-exclamation-triangle"></i> ยืนยันการลบ</h3>
+        <p class="dialog-subtitle">คุณต้องการลบรายการแจ้งซ่อมต่อไปนี้ใช่หรือไม่?</p>
+        <div class="delete-info">
+            <strong>เลขที่:</strong> <span id="deleteSequenceNumber"></span><br>
+            <strong>รายการ:</strong> <span id="deleteRepairItem"></span>
+        </div>
+        <p style="color: #b91c1c; font-weight: 500; margin-top: 1rem;">การกระทำนี้ไม่สามารถย้อนกลับได้ ข้อมูลทั้งหมดที่เกี่ยวข้องจะถูกลบอย่างถาวร</p>
+        <div class="dialog-buttons">
+            <button type="button" class="dialog-btn cancel" onclick="closeDeleteModal()">ยกเลิก</button>
+            <button type="button" class="dialog-btn danger" id="confirmDeleteBtn">
+                <i class="fas fa-trash"></i> ยืนยันการลบ
+            </button>
+        </div>
+    </div>
+</div>
+
+    <!-- Image Gallery Modal -->
+    <div id="imageGalleryModal" class="dialog-overlay">
+        <div class="dialog" style="max-width: 800px;">
+            <div id="galleryHeader"></div>
+            <div id="galleryGrid" class="image-gallery"></div>
+            <div class="dialog-buttons">
+                <button class="dialog-btn cancel" onclick="closeImageGalleryModal()">ปิด</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div id="detailModal" class="dialog-overlay">
+        <div class="dialog" id="detailContent">
+            <!-- เนื้อหาจะถูกสร้างโดย JavaScript -->
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer style="background: white; padding: 2rem 0; margin-top: 4rem; border-top: 1px solid #e5e7eb;">
+        <div style="max-width: 1600px; margin: 0 auto; text-align: center; color: #6b7280; padding: 0 2rem;">
+            <p style="margin: 0; font-size: 0.9rem;">
+                © 2026 ระบบแจ้งซ่อมออนไลน์ มหาวิทยาลัยสวนดุสิต ศูนย์การศึกษาลำปาง | พัฒนาโดย ชูเกียรติ กุศลสถิตย์
+            </p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+       // === [เพิ่มใหม่] ค่าคงที่สำหรับฝั่ง Client ===
+   const MONTHS_TH = [
+       'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+       'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+   ];
+   let lastReportUrl = ''; // เพิ่มตัวแปรสำหรับเก็บ URL ของรายงานล่าสุด
+
+// === GLOBAL VARIABLES ===
+let currentPage = 1;
+const rowsPerPage = 10;
+let allData = [];
+let filteredData = [];
+let chartData = null;
+let isLoggedIn = false;
+let statusChart = null;
+let repairTypeChart = null;
+let technicianChart = null;
+let availableTechnicians = [];
+let activeSequenceNumber = null; // เก็บเลขที่ที่กำลังดำเนินการ
+let editSelectedImages = []; // ⭐ เพิ่มตัวแปรสำหรับเก็บรูปภาพใน modal แก้ไข
+let currentStockChart = null;
+let stockMovementChart = null;
+let __glCount = 0;
+
+const baseUrl = '<?= baseUrl ?>'.includes('baseUrl') 
+           ? window.location.href.split('?')[0] 
+           : '<?= baseUrl ?>';
+
+  function normalizeDriveFileId(value) {
+  if (!value) return '';
+  const v = String(value).trim();
+  if (!v) return '';
+
+  const patterns = [
+    /\/d\/([a-zA-Z0-9_-]{25,})/,
+    /[?&]id=([a-zA-Z0-9_-]{25,})/,
+    /\/file\/d\/([a-zA-Z0-9_-]{25,})/,
+    /\/uc\?.*id=([a-zA-Z0-9_-]{25,})/,
+    /^([a-zA-Z0-9_-]{25,})$/
+  ];
+
+  for (let i = 0; i < patterns.length; i++) {
+    const m = v.match(patterns[i]);
+    if (m && m[1]) return m[1];
+  }
+  return '';
+}
+
+function buildImageUrl(raw) {
+  const id = normalizeDriveFileId(raw);
+  if (!id) return '';
+  return baseUrl + '?action=serveImage&id=' + encodeURIComponent(id);
+}
+
+let tableRenderToken = 0;
+
+function isMobileViewport() {
+  return window.matchMedia('(max-width: 768px)').matches;
+}
+
+function deferTask(fn) {
+  if (window.requestIdleCallback) {
+    requestIdleCallback(fn, { timeout: 500 });
+    return;
+  }
+  setTimeout(fn, 16);
+}
+
+function nextFrame(fn) {
+  window.requestAnimationFrame(function() {
+    window.requestAnimationFrame(fn);
+  });
+}
+      
+
+   
+    function navigateToPage(page) {
+        // สำหรับหน้าหลัก (index) ให้ใช้ URL หลักโดยตรง
+        const targetUrl = (page && page !== 'index')
+            ? baseUrl + '?page=' + page
+            : baseUrl;
+
+        console.log('Navigating to:', targetUrl);
+        // ใช้ window.top.location.href เพื่อเปลี่ยนหน้าของเบราว์เซอร์หลัก
+        window.top.location.href = targetUrl;
+    }
+
+        // === INITIALIZATION ===
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeSystem();
+        });
+
+                 function initializeSystem() {
+            console.log('🚀 Initializing dashboard system (Berry Version)...');
+            
+            checkLoginStatus();
+            loadTechnicians();
+            loadData();
+            loadReportMonths();
+            
+            // ✅ [FIXED] เรียก getUrl() ที่มี wrapper รองรับแล้ว หรือใช้ getUrl เดิมถ้ามี
+            try {
+                if (typeof google !== 'undefined' && google.script && google.script.run) {
+                    google.script.run
+                        .withSuccessHandler(function(url) {
+                            currentUrl = url;
+                            console.log('🔗 Current URL:', currentUrl);
+                        })
+                        .withFailureHandler(function(error) {
+                            console.warn('⚠️ Could not get URL (minor issue):', error);
+                        })
+                        .getUrl(); // ตอนนี้ Server มีฟังก์ชันนี้แล้ว ไม่ Error แน่นอนค่ะ
+                }
+            } catch (error) {
+                console.warn('Google script not available:', error);
+            }
+        }
+
+        // === USER MANAGEMENT ===
+      function checkLoginStatus() {
+            const userInfo = localStorage.getItem('userInfo');
+            isLoggedIn = false;
+            currentUser = null;
+            
+            if (userInfo) {
+                try {
+                    const user = JSON.parse(userInfo);
+                    if (user && user.username) {
+                        isLoggedIn = true;
+                        currentUser = user; // สำคัญมาก: ทำให้ตารางแสดงปุ่มแก้ไข/ลบ/มอบหมายงาน
+                        updateUIByRole(user); // สำคัญมาก: เรียกเปิดปุ่มสต็อกและเปลี่ยนป้ายชื่อ
+                        console.log('User logged in:', user.username, 'Role:', user.role);
+                    }
+                } catch (e) {
+                    console.error('Error parsing user info:', e);
+                    localStorage.removeItem('userInfo');
+                }
+            }
+            
+            if (!isLoggedIn) {
+                setPublicMode();
+            }
+        }
+
+     function updateUIByRole(user) {
+            const publicNotice = document.getElementById('publicNotice');
+            const userBadge = document.getElementById('userBadge');
+            const userName = document.getElementById('userName');
+            
+            // เช็คสิทธิ์ผู้ใช้งาน
+            const role = String(user.role || '').trim().toLowerCase();
+            const isAdmin = (role === 'admin');
+            const isTech = (role === 'technician');
+
+            // ✨ [BERRY MOD] จัดการปุ่มต่างๆ ตามสิทธิ์
+            const btnTestSystem = document.getElementById('btnTestSystem');
+            const btnDebugImage = document.getElementById('btnDebugImage');
+            const navStockBtn = document.getElementById('navStockBtn');
+            
+            if (btnTestSystem) btnTestSystem.style.display = isAdmin ? 'inline-flex' : 'none';
+            if (btnDebugImage) btnDebugImage.style.display = isAdmin ? 'inline-flex' : 'none';
+            
+            // ปลดล็อกปุ่มสต็อกอะไหล่ (เฉพาะแอดมินและช่าง)
+            if (navStockBtn) navStockBtn.style.display = (isAdmin || isTech) ? 'inline-flex' : 'none';
+            
+            // ซ่อนประกาศสาธารณะเมื่อเข้าสู่ระบบแล้ว
+            if (publicNotice) publicNotice.style.display = 'none';
+            
+            // อัปเดตชื่อผู้ใช้
+            if (userName) userName.textContent = user.displayName || user.name || user.username;
+            
+            // อัปเดตป้าย Badge มุมขวาบน
+            if (userBadge) {
+                const icon = userBadge.querySelector('i');
+                if (icon) {
+                    switch(user.role) {
+                        case 'admin':
+                            icon.className = 'fas fa-user-shield';
+                            userBadge.style.background = '#dc2626';
+                            userBadge.style.color = 'white';
+                            break;
+                        case 'technician':
+                            icon.className = 'fas fa-user-cog';
+                            userBadge.style.background = '#059669';
+                            userBadge.style.color = 'white';
+                            break;
+                        default:
+                            icon.className = 'fas fa-user';
+                            userBadge.style.background = '#e0f2fe';
+                            userBadge.style.color = '#0369a1';
+                    }
+                }
+            }
+        }
+
+        // [ANCHOR: DASHBOARD-ALERT-GLOBAL]
+// CHANGE: เพิ่ม showAlert แบบ global (กัน showAlert is not defined) + robust fallback
+
+function showAlert(type, message) {
+  var alertBox = document.getElementById('alertMessage');
+  if (!alertBox) return;
+
+  if (alertBox._hideTimer) {
+    clearTimeout(alertBox._hideTimer);
+  }
+  if (alertBox._removeTimer) {
+    clearTimeout(alertBox._removeTimer);
+  }
+
+  var rawMessage = String(message || '').trim();
+  var safeMessage = rawMessage
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  var icon = 'ℹ️';
+  if (type === 'success') icon = '✅';
+  if (type === 'error') icon = '❌';
+  if (type === 'info') icon = 'ℹ️';
+
+  var matched = rawMessage.match(/โหลดข้อมูลสำเร็จ\s*พบ\s*(\d+)\s*รายการ/i);
+  if (matched) {
+    var count = matched[1];
+    alertBox.innerHTML =
+      '<span class="alert-icon">' + icon + '</span>' +
+      '<span class="alert-text">' +
+      'โหลดข้อมูลสำเร็จ' +
+      '<span class="alert-sep">•</span>' +
+      'พบ' +
+      '<span class="alert-count">' + count + '</span>' +
+      'รายการ' +
+      '</span>';
+  } else {
+    alertBox.innerHTML =
+      '<span class="alert-icon">' + icon + '</span>' +
+      '<span class="alert-text">' + safeMessage + '</span>';
+  }
+
+  alertBox.className = 'alert ' + type + ' show';
+  alertBox.style.animation = '';
+
+  alertBox._hideTimer = setTimeout(function() {
+    var exitAnimation = window.innerWidth <= 768
+      ? 'toastSlideOutMobile 0.24s ease forwards'
+      : 'toastSlideOutDesktop 0.24s ease forwards';
+
+    alertBox.style.animation = exitAnimation;
+
+    alertBox._removeTimer = setTimeout(function() {
+      alertBox.className = 'alert ' + type;
+      alertBox.style.animation = '';
+      alertBox.innerHTML = '';
+    }, 240);
+  }, 2600);
+}
+
+
+        // [ANCHOR: CLIENT-DASHBOARD-SET-PUBLIC-MODE]
+function setPublicMode() {
+    isLoggedIn = false;
+    currentUser = { role: 'public' };
+
+    const btnTestSystem = document.getElementById('btnTestSystem');
+    const btnDebugImage = document.getElementById('btnDebugImage');
+    const navStockBtn = document.getElementById('navStockBtn');
+
+    if (btnTestSystem) btnTestSystem.style.display = 'none';
+    if (btnDebugImage) btnDebugImage.style.display = 'none';
+    if (navStockBtn) navStockBtn.style.display = 'none';
+            
+            const userName = document.getElementById('userName');
+            if (userName) userName.textContent = 'เข้าถึงสาธารณะ';
+
+            const userBadge = document.getElementById('userBadge');
+            if (userBadge) {
+                const icon = userBadge.querySelector('i');
+                if (icon) icon.className = 'fas fa-users';
+                userBadge.style.background = '#e0f2fe';
+                userBadge.style.color = '#0369a1';
+            }
+
+            const publicNotice = document.getElementById('publicNotice');
+            if (publicNotice) publicNotice.style.display = 'block';
+        }
+
+        // === TECHNICIAN DATA ===
+        function loadTechnicians() {
+    console.log('👨‍🔧 Loading technicians from Google Sheet...');
+
+    function sanitizeTechnicians(list) {
+        var seen = {};
+        var cleaned = [];
+
+        (Array.isArray(list) ? list : []).forEach(function(name) {
+            var safeName = String(name == null ? '' : name)
+                .replace(/[\r\n]+/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            if (!safeName) return;
+            if (seen[safeName]) return;
+
+            seen[safeName] = true;
+            cleaned.push(safeName);
+        });
+
+        return cleaned;
+    }
+
+    function bindTechniciansToReportSelector(techs, attempt) {
+        var retryCount = typeof attempt === 'number' ? attempt : 0;
+        var reportSelector = document.getElementById('reportTechnicianSelector');
+
+        console.log('🔍 reportTechnicianSelector found:', !!reportSelector, 'attempt:', retryCount);
+
+        if (!reportSelector) {
+            if (retryCount < 10) {
+                setTimeout(function() {
+                    bindTechniciansToReportSelector(techs, retryCount + 1);
+                }, 300);
+            } else {
+                console.warn('⚠️ reportTechnicianSelector not found after retry, skip binding');
+            }
+            return;
+        }
+
+        var currentValue = String(reportSelector.value || '').trim();
+        var cleanList = sanitizeTechnicians(techs);
+
+        console.log('🧹 Technicians after trim/filter/deduplicate:', cleanList);
+
+        reportSelector.innerHTML = '';
+
+        var defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = '-- รวมทุกคน --';
+        reportSelector.appendChild(defaultOption);
+
+        cleanList.forEach(function(name) {
+            var option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            reportSelector.appendChild(option);
+            console.log('✅ Technician appended:', name);
+        });
+
+        if (currentValue && cleanList.indexOf(currentValue) !== -1) {
+            reportSelector.value = currentValue;
+        } else {
+            reportSelector.value = '';
+        }
+
+        reportSelector.disabled = false;
+
+        console.log('✅ reportTechnicianSelector bind success');
+        console.log('📌 First option text:', reportSelector.options[0] ? reportSelector.options[0].text : '');
+        console.log('📊 Total options in dropdown:', reportSelector.options.length);
+    }
+
+    function applyFallbackTechnicians() {
+        availableTechnicians = sanitizeTechnicians([
+            'มนัส พูลเกษม',
+            'ชูเกียรติ กุศลสถิตย์',
+            'สันติภาพ พัฒนบวรวงศ์',
+            'รัฐพงษ์ ใจวงศ์คำ'
+        ]);
+        bindTechniciansToReportSelector(availableTechnicians, 0);
+    }
+
+    try {
+        google.script.run
+            .withSuccessHandler(function(techs) {
+                console.log('✅ Technicians loaded:', techs);
+                availableTechnicians = sanitizeTechnicians(techs || []);
+                console.log('🧹 Clean technicians stored:', availableTechnicians);
+                bindTechniciansToReportSelector(availableTechnicians, 0);
+            })
+            .withFailureHandler(function(error) {
+                console.error('❌ Error loading technicians:', error);
+                applyFallbackTechnicians();
+                showAlert('error', 'ไม่สามารถโหลดรายชื่อผู้รับผิดชอบได้ กำลังใช้ข้อมูลสำรอง');
+            })
+            .getTechnicians();
+    } catch (error) {
+        console.error('❌ Google Script error on getTechnicians:', error);
+        applyFallbackTechnicians();
+    }
+}
+        // === TABLE HEADER GENERATION ===
+       function generateTableHeader() {
+    const tableHeader = document.getElementById('tableHeader');
+    let headerHTML = '';
+    
+    headerHTML += '<th><i class="fas fa-hashtag"></i> เลขที่</th>';
+    headerHTML += '<th><i class="fas fa-calendar"></i> วันที่/เวลา</th>'; // ✅ ถูกต้องค่ะ
+    headerHTML += '<th><i class="fas fa-user"></i> ผู้แจ้งซ่อม</th>';
+    headerHTML += '<th><i class="fas fa-wrench"></i> รายการแจ้งซ่อม</th>';
+    headerHTML += '<th><i class="fas fa-map-marker-alt"></i> สถานที่</th>';
+    headerHTML += '<th><i class="fas fa-user-cog"></i> ผู้รับผิดชอบ</th>';
+    headerHTML += '<th><i class="fas fa-info-circle"></i> สถานะ</th>';
+    headerHTML += '<th><i class="fas fa-cogs"></i> การจัดการ</th>';
+    
+    tableHeader.innerHTML = headerHTML;
+}
+
+ 
+        // === DATA LOADING ===
+    function loadData() {
+  console.log('Loading dashboard data.');
+  showLoading(true);
+
+  runServer(
+    'getDashboardData',
+    [],
+    'กำลังโหลดข้อมูลรายการแจ้งซ่อม',
+    'กำลังประมวลผลข้อมูลแดชบอร์ด',
+    function (result) {
+      console.log('Dashboard data received:', result);
+      handleDataResponse(result);
+      showLoading(false);
+    },
+    function (error) {
+      console.error('Load dashboard data error:', error);
+      showAlert('error', 'เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + (error.message || error));
+      showEmpty();
+      showLoading(false);
+    }
+  );
+}
+
+       
+  function handleDataResponse(result) {
+  console.log('📨 Data response received:', result);
+  showLoading(false);
+
+  try {
+    const processedResult = result;
+
+    if (!processedResult) {
+      throw new Error('ไม่ได้รับข้อมูลจากเซิร์ฟเวอร์');
+    }
+
+    if (processedResult.hasOwnProperty('success') && !processedResult.success) {
+      throw new Error(processedResult.error || 'เซิร์ฟเวอร์ส่งคืนสถานะไม่สำเร็จ');
+    }
+
+    if (!processedResult.data || !Array.isArray(processedResult.data)) {
+      throw new Error('รูปแบบข้อมูลที่ได้รับไม่ถูกต้อง');
+    }
+
+    allData = processedResult.data;
+    chartData = processedResult.chartData || null;
+    filteredData = allData.slice();
+    currentPage = 1;
+
+    console.log('✅ Data loaded successfully:', allData.length, 'items');
+
+    generateTableHeader();
+    updateStatistics();
+
+    renderTable();
+
+    deferTask(function() {
+      updateCharts();
+    });
+
+    if (allData.length > 0) {
+      showAlert('success', 'โหลดข้อมูลสำเร็จ พบ ' + allData.length + ' รายการ');
+    } else {
+      showAlert('info', 'ไม่พบข้อมูลในระบบ Google Sheets');
+    }
+
+  } catch (e) {
+    console.error('❌ Error processing data:', e);
+    handleDataError(e);
+  }
+}
+
+        function handleDataError(error) {
+    console.error('❌ Load data error from server:', error);
+    showLoading(false);
+    
+    // ไม่ใช้ข้อมูลตัวอย่าง แสดงสถานะว่าง
+    allData = [];
+    filteredData = [];
+    chartData = null;
+    
+    generateTableHeader();
+    showEmptyState();
+    updateStatistics();
+    updateCharts();
+    
+    showAlert('error', `❌ ไม่สามารถโหลดข้อมูลได้: ${error.message || 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้'}`);
+}
+
+        // === CHART DATA PROCESSING ===
+      function processChartData() {
+            try {
+                if (!chartData) {
+                    chartData = {
+                        statusCount: {
+                            pending: 0,
+                            processing: 0,
+                            parts: 0, // ✅ เพิ่ม: ตัวนับสำหรับสถานะรอเบิกพัสดุ
+                            completed: 0,
+                            cancelled: 0
+                        },
+                        repairTypeCount: {
+                            general: 0,
+                            electrical: 0,
+                            plumbing: 0,
+                            aircon: 0,
+                            computer: 0,
+                            appliance: 0,
+                            other: 0
+                        },
+                        technicianCount: []
+                    };
+
+                    if (filteredData && filteredData.length > 0) {
+                        filteredData.forEach(item => {
+                            // Count by status
+                            // ✅ เพิ่ม: Logic การนับสถานะพัสดุอยู่ระหว่างรอเบิก
+                            if (item.status === 'รอดำเนินการ') {
+                                chartData.statusCount.pending++;
+                            } else if (item.status === 'กำลังดำเนินการ') {
+                                chartData.statusCount.processing++;
+                             } else if (item.status === 'ดำเนินการภายนอก') {
+                                chartData.statusCount.external = (chartData.statusCount.external || 0) + 1;
+                            } else if (item.status === 'พัสดุอยู่ระหว่างรอเบิก') {
+                                chartData.statusCount.parts++; 
+                            } else if (item.status === 'เสร็จสิ้น') {
+                                chartData.statusCount.completed++;
+                            } else if (item.status === 'ยกเลิก') {
+                                chartData.statusCount.cancelled++;
+                            }
+
+                            // Count by repair type
+                            switch (item.repairType) {
+                                case 'ทั่วไป':
+                                    chartData.repairTypeCount.general++;
+                                    break;
+                                case 'ไฟฟ้า':
+                                    chartData.repairTypeCount.electrical++;
+                                    break;
+                                case 'ประปา':
+                                    chartData.repairTypeCount.plumbing++;
+                                    break;
+                                case 'แอร์':
+                                    chartData.repairTypeCount.aircon++;
+                                    break;
+                                case 'คอมพิวเตอร์':
+                                    chartData.repairTypeCount.computer++;
+                                    break;
+                                case 'เครื่องใช้ไฟฟ้า':
+                                    chartData.repairTypeCount.appliance++;
+                                    break;
+                                default:
+                                    chartData.repairTypeCount.other++;
+                                    break;
+                            }
+                        });
+                        chartData.technicianCount = generateTechnicianStats(filteredData);
+                    }
+                }
+
+                console.log('📊 Chart data processed:', chartData);
+            } catch (error) {
+                console.error('❌ Error processing chart data:', error);
+            }
+        }
+
+       function generateTechnicianStats(data) {
+  const technicianMap = {};
+
+  const normalizeStatusName = (input) => {
+    const s = String(input || '').trim();
+    if (s === 'รอเบิกพัสดุ') return 'พัสดุอยู่ระหว่างรอเบิก';
+    return s;
+  };
+
+  data.forEach(item => {
+    const tech = (item.assignedTechnician || '').toString().trim();
+    const status = normalizeStatusName(item.status);
+
+    if (!tech || tech === '-') return;
+
+    if (!technicianMap[tech]) {
+      technicianMap[tech] = {
+        name: tech,
+        total: 0,
+        pending: 0,
+        processing: 0,
+        external: 0,
+        parts: 0,
+        completed: 0,
+        cancelled: 0
+      };
+    }
+
+    technicianMap[tech].total++;
+
+    if (status === 'รอดำเนินการ') technicianMap[tech].pending++;
+    else if (status === 'กำลังดำเนินการ') technicianMap[tech].processing++;
+    else if (status === 'ดำเนินการภายนอก') technicianMap[tech].external++;
+    else if (status === 'พัสดุอยู่ระหว่างรอเบิก') technicianMap[tech].parts++;
+    else if (status === 'เสร็จสิ้น') technicianMap[tech].completed++;
+    else if (status === 'ยกเลิก') technicianMap[tech].cancelled++;
+  });
+
+  return Object.values(technicianMap)
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 10);
+}
+        // === CHART UPDATES ===
+// [ANCHOR: DASHBOARD-UPDATE-CHARTS-SAFE-RENDER]
+function updateCharts() {
+  console.log('📊 Updating dashboard charts.');
+
+  if (!chartData) {
+    console.warn('⚠️ No chart data available, processing.');
+    processChartData();
+  }
+
+  function safeRenderChart(name, fn) {
+    try {
+      fn();
+    } catch (err) {
+      console.error('❌ Chart render failed:', name, err);
+    }
+  }
+
+  const runCharts = function() {
+    const repairCanvas = document.getElementById('repairTypeChart');
+    const techCanvas = document.getElementById('technicianChart');
+
+    const repairCard = repairCanvas && repairCanvas.parentElement && repairCanvas.parentElement.parentElement
+      ? repairCanvas.parentElement.parentElement
+      : null;
+
+    const techCard = techCanvas && techCanvas.parentElement && techCanvas.parentElement.parentElement
+      ? techCanvas.parentElement.parentElement
+      : null;
+
+    if (repairCard) repairCard.style.display = '';
+    if (techCard) techCard.style.display = '';
+
+    safeRenderChart('statusChart', updateStatusChart);
+
+    if (!isMobileViewport()) {
+      safeRenderChart('repairTypeChart', updateRepairTypeChart);
+      safeRenderChart('technicianChart', updateTechnicianChart);
+      safeRenderChart('currentStockChart', updateCurrentStockChart);
+      safeRenderChart('stockMovementChart', updateStockMovementChart);
+      safeRenderChart('lowStockAlert', updateLowStockAlert);
+    } else {
+      safeRenderChart('currentStockChart', updateCurrentStockChart);
+      safeRenderChart('stockMovementChart', updateStockMovementChart);
+      safeRenderChart('lowStockAlert', updateLowStockAlert);
+
+      if (repairCard) repairCard.style.display = 'none';
+      if (techCard) techCard.style.display = 'none';
+    }
+  };
+
+  nextFrame(runCharts);
+}
+
+function updatePartsStockChart() {
+  var ctx = document.getElementById('partsStockChart');
+  if (!ctx || !chartData || !chartData.partsStock || chartData.partsStock.length === 0) return;
+  
+  if (window.partsChartInst) window.partsChartInst.destroy();
+  
+  var labels = chartData.partsStock.map(function(p) { return p.name; });
+  var data = chartData.partsStock.map(function(p) { return p.balance; });
+  
+  window.partsChartInst = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets:[{
+        label: 'จำนวนคงเหลือ', data: data,
+        backgroundColor: 'rgba(16, 185, 129, 0.8)', borderColor: '#059669', borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { y: { beginAtZero: true, ticks: { stepSize: 1, font: {family: 'Sarabun'} } }, x: { ticks: { font: {family: 'Sarabun'} } } },
+      plugins: { legend: { display: false }, tooltip: { titleFont: {family: 'Sarabun'}, bodyFont: {family: 'Sarabun'}, callbacks: { label: function(ctx) { return 'คงเหลือ: ' + ctx.raw + ' รายการ'; } } } }
+    }
+  });
+}
+
+
+function updateStatusChart() {
+    const statusCtx = document.getElementById('statusChart');
+    if (!statusCtx) {
+        console.error('❌ Status chart canvas not found');
+        return;
+    }
+
+    try {
+        if (statusChart) {
+            statusChart.destroy();
+        }
+
+        // เช็กข้อมูลเบื้องต้น
+        const hasData = chartData && chartData.statusCount;
+
+        if (!hasData) {
+            statusCtx.style.display = 'none';
+            const container = statusCtx.parentElement;
+            container.innerHTML = `
+                <div class="chart-no-data">
+                    <i class="fas fa-chart-pie"></i>
+                    <h4>ไม่มีข้อมูลสำหรับแสดงกราฟ</h4>
+                    <p>เมื่อมีการแจ้งซ่อม กราฟจะแสดงที่นี่</p>
+                </div>
+            `;
+            return;
+        }
+
+          statusCtx.style.display = 'block';
+        
+        const labels =['รอดำเนินการ', 'กำลังดำเนินการ', 'ดำเนินการภายนอก', 'รอเบิกพัสดุ', 'เสร็จสิ้น', 'ยกเลิก'];
+        
+        const statusData =[
+            chartData.statusCount.pending || 0,
+            chartData.statusCount.processing || 0,
+            chartData.statusCount.external || 0,
+            chartData.statusCount.parts || 0, 
+            chartData.statusCount.completed || 0,
+            chartData.statusCount.cancelled || 0
+        ];
+
+        statusChart = new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: labels, 
+                datasets:[{
+                    data: statusData,
+                    backgroundColor:[
+                        '#f59e0b', 
+                        '#3b82f6', 
+                        '#06b6d4', 
+                        '#8b5cf6', 
+                        '#10b981', 
+                        '#ef4444'  
+                    ],
+                    borderWidth: 3,
+                    borderColor: '#ffffff',
+                    hoverBorderWidth: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            font: { family: 'Sarabun', size: 13 }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleFont: { family: 'Sarabun' },
+                        bodyFont: { family: 'Sarabun' },
+                        callbacks: {
+                            label: function(context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? ((context.parsed * 100) / total).toFixed(1) : 0;
+                                return `${context.label}: ${context.parsed} รายการ (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        console.log('✅ Status chart updated successfully with mandatory labels');
+
+    } catch (error) {
+        console.error('❌ Error updating status chart:', error);
+        statusCtx.style.display = 'none';
+        const container = statusCtx.parentElement;
+        container.innerHTML = `
+            <div class="chart-no-data">
+                <i class="fas fa-exclamation-triangle" style="color: #ef4444;"></i>
+                <h4>เกิดข้อผิดพลาดในการแสดงกราฟ</h4>
+                <p>กรุณาลองรีเฟรชหน้าเว็บ</p>
+            </div>
+        `;
+    }
+}
+
+        function updateRepairTypeChart() {
+            const repairTypeCtx = document.getElementById('repairTypeChart');
+            if (!repairTypeCtx) {
+                console.error('❌ Repair type chart canvas not found');
+                return;
+            }
+            
+            try {
+                if (repairTypeChart) {
+                    repairTypeChart.destroy();
+                }
+                
+                const hasData = chartData && chartData.repairTypeCount && 
+                    Object.values(chartData.repairTypeCount).some(count => count > 0);
+                    
+                if (!hasData) {
+                    repairTypeCtx.style.display = 'none';
+                    const container = repairTypeCtx.parentElement;
+                    container.innerHTML = `
+                        <div class="chart-no-data">
+                            <i class="fas fa-chart-bar"></i>
+                            <h4>ไม่มีข้อมูลสำหรับแสดงกราฟ</h4>
+                            <p>เมื่อมีการแจ้งซ่อม กราฟจะแสดงที่นี่</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                repairTypeCtx.style.display = 'block';
+                
+                const repairTypeData = [
+                    chartData.repairTypeCount.general || 0,
+                    chartData.repairTypeCount.electrical || 0,
+                    chartData.repairTypeCount.plumbing || 0,
+                    chartData.repairTypeCount.aircon || 0,
+                    chartData.repairTypeCount.computer || 0,
+                    chartData.repairTypeCount.appliance || 0,
+                    chartData.repairTypeCount.other || 0
+                ];
+                
+                repairTypeChart = new Chart(repairTypeCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['ทั่วไป', 'ไฟฟ้า', 'ประปา', 'แอร์', 'คอมพิวเตอร์', 'เครื่องใช้ไฟฟ้า', 'อื่นๆ'],
+                        datasets: [{
+                            label: 'จำนวนรายการ',
+                            data: repairTypeData,
+                            backgroundColor: [
+                                'rgba(107, 114, 128, 0.8)',
+                                'rgba(245, 158, 11, 0.8)',
+                                'rgba(59, 130, 246, 0.8)',
+                                'rgba(16, 185, 129, 0.8)',
+                                'rgba(139, 92, 246, 0.8)',
+                                'rgba(239, 68, 68, 0.8)',
+                                'rgba(156, 163, 175, 0.8)'
+                            ],
+                            borderColor: [
+                                '#6b7280',
+                                '#f59e0b',
+                                '#3b82f6',
+                                '#10b981',
+                                '#8b5cf6',
+                                '#ef4444',
+                                '#9ca3af'
+                            ],
+                            borderWidth: 2,
+                            borderRadius: 8,
+                            borderSkipped: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1,
+                                    font: { family: 'Sarabun' }
+                                },
+                                grid: { color: 'rgba(0, 0, 0, 0.1)' }
+                            },
+                            x: {
+                                ticks: { 
+                                    font: { family: 'Sarabun' },
+                                    maxRotation: 45,
+                                    minRotation: 0
+                                },
+                                grid: { display: false }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                titleFont: { family: 'Sarabun' },
+                                bodyFont: { family: 'Sarabun' },
+                                callbacks: {
+                                    label: function(context) {
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = total > 0 ? ((context.parsed.y * 100) / total).toFixed(1) : 0;
+                                        return `${context.parsed.y} รายการ (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                console.log('✅ Repair type chart updated successfully');
+                
+            } catch (error) {
+                console.error('❌ Error updating repair type chart:', error);
+                repairTypeCtx.style.display = 'none';
+                const container = repairTypeCtx.parentElement;
+                container.innerHTML = `
+                    <div class="chart-no-data">
+                        <i class="fas fa-exclamation-triangle" style="color: #ef4444;"></i>
+                        <h4>เกิดข้อผิดพลาดในการแสดงกราฟ</h4>
+                        <p>กรุณาลองรีเฟรชหน้าเว็บ</p>
+                    </div>
+                `;
+            }
+        }
+
+       // [ANCHOR: DASHBOARD-TECHNICIAN-CHART-HORIZONTAL-SAFE]
+function updateTechnicianChart() {
+  const canvas = document.getElementById('technicianChart');
+  if (!canvas) {
+    console.warn('⚠️ technicianChart canvas not found');
+    return;
+  }
+
+  if (window.technicianChartInst) {
+    window.technicianChartInst.destroy();
+  }
+
+  const rawData = (chartData && Array.isArray(chartData.technicianCount)) ? chartData.technicianCount : [];
+  const hasData = rawData.length > 0;
+  const isMobile = window.innerWidth <= 767;
+
+  const labels = hasData ? rawData.map(d => d.name || '-') : ['ยังไม่มีข้อมูล'];
+  const pendingData = hasData ? rawData.map(d => d.pending || 0) : [0];
+  const processingData = hasData ? rawData.map(d => d.processing || 0) : [0];
+  const completedData = hasData ? rawData.map(d => d.completed || 0) : [0];
+
+  const wrapper = canvas.parentElement;
+  if (wrapper) {
+    wrapper.style.height = isMobile ? '260px' : '320px';
+  }
+
+  window.technicianChartInst = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'รอดำเนินการ', data: pendingData, backgroundColor: '#f59e0b', borderRadius: 6, maxBarThickness: isMobile ? 14 : 20 },
+        { label: 'กำลังดำเนินการ', data: processingData, backgroundColor: '#3b82f6', borderRadius: 6, maxBarThickness: isMobile ? 14 : 20 },
+        { label: 'เสร็จสิ้น', data: completedData, backgroundColor: '#10b981', borderRadius: 6, maxBarThickness: isMobile ? 14 : 20 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      interaction: { mode: 'index', intersect: false },
+      layout: {
+        padding: { top: 4, right: 8, bottom: 4, left: 4 }
+      },
+      plugins: {
+        legend: {
+          position: isMobile ? 'bottom' : 'top',
+          labels: {
+            usePointStyle: true,
+            boxWidth: isMobile ? 8 : 10,
+            padding: isMobile ? 10 : 14,
+            font: { family: 'Sarabun', size: isMobile ? 10 : 11 }
+          }
+        },
+        tooltip: {
+          titleFont: { family: 'Sarabun', size: isMobile ? 12 : 13 },
+          bodyFont: { family: 'Sarabun', size: isMobile ? 11 : 12 },
+          callbacks: {
+            label: (ctx) => hasData ? ` ${ctx.dataset.label}: ${ctx.raw} งาน` : ' ไม่มีข้อมูล'
+          }
+        }
+      },
+      scales: {
+        x: {
+          stacked: true,
+          ticks: {
+            stepSize: 1,
+            font: { family: 'Sarabun', size: isMobile ? 10 : 11 }
+          },
+          grid: { color: 'rgba(148, 163, 184, 0.15)' }
+        },
+        y: {
+          stacked: true,
+          ticks: {
+            autoSkip: false,
+            font: { family: 'Sarabun', size: isMobile ? 10 : 11 }
+          },
+          grid: { display: false }
+        }
+      }
+    }
+  });
+
+  console.log('✅ Technician chart updated successfully (mobile safe)');
+}
+// [ANCHOR: DASHBOARD-CURRENT-STOCK-CHART-FULLNAME-TOOLTIP]
+function updateCurrentStockChart() {
+  var ctx = document.getElementById('currentStockChart');
+  if (!ctx) return;
+
+  if (currentStockChart) {
+    currentStockChart.destroy();
+  }
+
+  if (!chartData || !chartData.currentStock || chartData.currentStock.length === 0) {
+    return;
+  }
+
+  var labels = chartData.currentStock.map(function(item) {
+    return item.name;
+  });
+
+  var fullNames = chartData.currentStock.map(function(item) {
+    return item.fullName || item.name;
+  });
+
+  var data = chartData.currentStock.map(function(item) {
+    return item.balance;
+  });
+
+  currentStockChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'คงเหลือปัจจุบัน',
+        data: data,
+        backgroundColor: 'rgba(16, 185, 129, 0.82)',
+        borderColor: '#059669',
+        borderWidth: 1,
+        borderRadius: 8
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            stepSize: 1,
+            font: { family: 'Sarabun' }
+          }
+        },
+        x: {
+          ticks: {
+            font: { family: 'Sarabun' }
+          }
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          titleFont: { family: 'Sarabun' },
+          bodyFont: { family: 'Sarabun' },
+          callbacks: {
+            title: function(items) {
+              var index = items[0].dataIndex;
+              return fullNames[index];
+            },
+            label: function(ctx) {
+              return 'คงเหลือ: ' + ctx.raw + ' ชิ้น';
+            }
+          }
+        }
+      }
+    }
+  });
+
+  console.log('✅ Current stock chart updated successfully');
+}
+
+// [ANCHOR: DASHBOARD-STOCK-MOVEMENT-CHART-FULLNAME-TOOLTIP]
+function updateStockMovementChart() {
+  var ctx = document.getElementById('stockMovementChart');
+  if (!ctx) return;
+
+  if (stockMovementChart) {
+    stockMovementChart.destroy();
+  }
+
+  if (!chartData || !chartData.stockMovement || chartData.stockMovement.length === 0) {
+    return;
+  }
+
+  var labels = chartData.stockMovement.map(function(item) {
+    return item.name;
+  });
+
+  var fullNames = chartData.stockMovement.map(function(item) {
+    return item.fullName || item.name;
+  });
+
+  var inData = chartData.stockMovement.map(function(item) {
+    return item.inQty;
+  });
+
+  var outData = chartData.stockMovement.map(function(item) {
+    return item.outQty;
+  });
+
+  stockMovementChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'รับเข้า',
+          data: inData,
+          backgroundColor: 'rgba(59, 130, 246, 0.82)',
+          borderColor: '#2563eb',
+          borderWidth: 1,
+          borderRadius: 8
+        },
+        {
+          label: 'เบิกออก',
+          data: outData,
+          backgroundColor: 'rgba(239, 68, 68, 0.82)',
+          borderColor: '#dc2626',
+          borderWidth: 1,
+          borderRadius: 8
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            stepSize: 1,
+            font: { family: 'Sarabun' }
+          }
+        },
+        x: {
+          ticks: {
+            font: { family: 'Sarabun' }
+          }
+        }
+      },
+      plugins: {
+        legend: {
+          display: true,
+          labels: {
+            font: { family: 'Sarabun' }
+          }
+        },
+        tooltip: {
+          titleFont: { family: 'Sarabun' },
+          bodyFont: { family: 'Sarabun' },
+          callbacks: {
+            title: function(items) {
+              var index = items[0].dataIndex;
+              return fullNames[index];
+            }
+          }
+        }
+      }
+    }
+  });
+
+  console.log('✅ Stock movement chart updated successfully');
+}
+
+// [ANCHOR: DASHBOARD-LOW-STOCK-ALERT-WITH-SUMMARY-SEVERITY]
+function updateLowStockAlert() {
+  var lowStockCountEl = document.getElementById('lowStockCount');
+  var lowStockListEl = document.getElementById('lowStockList');
+
+  if (!lowStockCountEl || !lowStockListEl) return;
+
+  var items = [];
+  if (chartData && chartData.lowStockItems && chartData.lowStockItems.length > 0) {
+    items = chartData.lowStockItems;
+  }
+
+  function getSeverity(item) {
+    var balance = Number(item.balance || 0);
+    var reorderPoint = Number(item.reorderPoint || 0);
+
+    if (balance <= 0) {
+      return {
+        label: 'หมดสต็อก',
+        badgeBg: '#dc2626',
+        itemBg: 'linear-gradient(135deg, #fef2f2 0%, #fff1f2 100%)',
+        borderColor: '#fca5a5',
+        textColor: '#991b1b',
+        level: 3
+      };
+    }
+
+    if (balance < reorderPoint) {
+      return {
+        label: 'ต่ำกว่าจุดเตือน',
+        badgeBg: '#f97316',
+        itemBg: 'linear-gradient(135deg, #fff7ed 0%, #fffbeb 100%)',
+        borderColor: '#fdba74',
+        textColor: '#9a3412',
+        level: 2
+      };
+    }
+
+    if (balance === reorderPoint) {
+      return {
+        label: 'ถึงจุดเตือน',
+        badgeBg: '#eab308',
+        itemBg: 'linear-gradient(135deg, #fefce8 0%, #fffbeb 100%)',
+        borderColor: '#fde047',
+        textColor: '#854d0e',
+        level: 1
+      };
+    }
+
+    return {
+      label: 'ปกติ',
+      badgeBg: '#10b981',
+      itemBg: 'linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)',
+      borderColor: '#86efac',
+      textColor: '#166534',
+      level: 0
+    };
+  }
+
+
+  function getSummarySeverity(list) {
+    var maxLevel = 0;
+
+    list.forEach(function(item) {
+      var severity = getSeverity(item);
+      if (severity.level > maxLevel) {
+        maxLevel = severity.level;
+      }
+    });
+
+    if (maxLevel === 3) {
+      return {
+        bg: 'linear-gradient(135deg, #fef2f2 0%, #fff1f2 100%)',
+        border: '#fca5a5',
+        countColor: '#dc2626',
+        text: 'ต้องรีบเติมสต็อก'
+      };
+    }
+
+    if (maxLevel === 2) {
+      return {
+        bg: 'linear-gradient(135deg, #fff7ed 0%, #fffbeb 100%)',
+        border: '#fdba74',
+        countColor: '#f97316',
+        text: 'ต่ำกว่าจุดเตือน'
+      };
+    }
+
+    if (maxLevel === 1) {
+      return {
+        bg: 'linear-gradient(135deg, #fefce8 0%, #fffbeb 100%)',
+        border: '#fde047',
+        countColor: '#ca8a04',
+        text: 'ถึงจุดเตือน'
+      };
+    }
+
+    return {
+      bg: 'linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)',
+      border: '#86efac',
+      countColor: '#059669',
+      text: 'สถานะปกติ'
+    };
+  }
+
+  lowStockCountEl.textContent = items.length;
+
+  var metricCard = lowStockCountEl.closest('.low-stock-metric');
+  var metricText = metricCard ? metricCard.querySelector('span') : null;
+
+  if (items.length === 0) {
+    if (metricCard) {
+      metricCard.style.background = 'linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)';
+      metricCard.style.borderColor = '#86efac';
+    }
+    lowStockCountEl.style.color = '#059669';
+    if (metricText) metricText.textContent = 'สถานะปกติ';
+
+    lowStockListEl.innerHTML = '<div class="low-stock-empty">ยังไม่มีรายการอะไหล่ใกล้หมด</div>';
+    return;
+  }
+
+  var summarySeverity = getSummarySeverity(items);
+
+  if (metricCard) {
+    metricCard.style.background = summarySeverity.bg;
+    metricCard.style.borderColor = summarySeverity.border;
+  }
+  lowStockCountEl.style.color = summarySeverity.countColor;
+  if (metricText) metricText.textContent = summarySeverity.text;
+
+  lowStockListEl.innerHTML = items.map(function(item) {
+    var severity = getSeverity(item);
+
+    return `
+      <div class="low-stock-item" style="background:${severity.itemBg}; border-color:${severity.borderColor};">
+        <div class="low-stock-item-head">
+          <div class="low-stock-name" style="color:${severity.textColor};">${item.fullName || item.name}</div>
+          <div class="low-stock-badge" style="background:${severity.badgeBg};">${severity.label}</div>
+        </div>
+        <div class="low-stock-meta">
+          รหัส: ${item.partId}<br>
+          คงเหลือ: ${item.balance} ชิ้น<br>
+          จุดเตือน: ${item.reorderPoint}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  console.log('✅ Low stock alert updated successfully');
+}
+
+
+
+function setGlobalLoading(show, title, sub) {
+  const ov = document.getElementById('globalLoadingOverlay');
+  const t = document.getElementById('glTitle');
+  const s = document.getElementById('glSub');
+
+  if (!ov) return;
+
+  if (title && t) t.textContent = title;
+  if (sub && s) s.textContent = sub;
+
+  ov.style.display = show ? 'flex' : 'none';
+  document.body.style.overflow = show ? 'hidden' : '';
+}
+
+function beginBusy(title, sub) {
+  __glCount++;
+  setGlobalLoading(true, title || 'กำลังประมวลผล', sub || 'โปรดรอสักครู่');
+}
+
+function endBusy() {
+  __glCount = Math.max(0, __glCount - 1);
+  if (__glCount === 0) setGlobalLoading(false);
+}
+
+function runServer(methodName, args, title, sub, onSuccess, onFail) {
+  beginBusy(title, sub);
+
+  try {
+    if (typeof google === 'undefined' || !google.script || !google.script.run) {
+      endBusy();
+      if (onFail) onFail(new Error('Google script not available'));
+      return;
+    }
+
+    let chain = google.script.run
+      .withSuccessHandler(function (res) {
+        endBusy();
+        if (onSuccess) onSuccess(res);
+      })
+      .withFailureHandler(function (err) {
+        endBusy();
+        if (onFail) onFail(err);
+      });
+
+    if (Array.isArray(args) && args.length) chain[methodName].apply(chain, args);
+    else chain[methodName]();
+
+  } catch (e) {
+    endBusy();
+    if (onFail) onFail(e);
+  }
+}
+
+function showLoading(show) {
+  const loadingState = document.getElementById('loadingState');
+  const dataTable = document.getElementById('dataTable');
+  const emptyState = document.getElementById('emptyState');
+
+  if (show) {
+    if (loadingState) loadingState.style.display = 'block';
+    if (dataTable) dataTable.style.display = 'none';
+    if (emptyState) emptyState.style.display = 'none';
+
+    if (typeof beginBusy === 'function') {
+      beginBusy('กำลังโหลดแดชบอร์ด', 'กำลังดึงข้อมูลจากฐานข้อมูล');
+    }
+  } else {
+    if (loadingState) loadingState.style.display = 'none';
+
+    if (typeof endBusy === 'function') {
+      endBusy();
+    }
+  }
+}      
+
+        function showEmptyState() {
+    const dataTable = document.getElementById('dataTable');
+    const emptyState = document.getElementById('emptyState');
+    
+    if (dataTable) dataTable.style.display = 'none';
+    if (emptyState) {
+        emptyState.style.display = 'block';
+        emptyState.innerHTML = `
+            <div class="empty-icon">
+                <i class="fas fa-database"></i>
+            </div>
+            <h3>ไม่มีข้อมูลในระบบ</h3>
+            <p>ไม่พบรายการแจ้งซ่อมใน Google Sheets</p>
+            <button onclick="loadData()" class="refresh-btn" style="margin-top: 1rem;">
+                <i class="fas fa-sync-alt"></i>
+                โหลดข้อมูลใหม่
+            </button>
+        `;
+    }
+}
+          function updateStatistics() {
+            const pending = filteredData.filter(item => item.status === 'รอดำเนินการ').length;
+            const processing = filteredData.filter(item => item.status === 'กำลังดำเนินการ').length;
+            const external = filteredData.filter(item => item.status === 'ดำเนินการภายนอก').length;
+            const parts = filteredData.filter(item => item.status === 'พัสดุอยู่ระหว่างรอเบิก').length;
+            const completed = filteredData.filter(item => item.status === 'เสร็จสิ้น').length;
+            const cancelled = filteredData.filter(item => item.status === 'ยกเลิก').length;
+            
+            document.getElementById('pendingCount').textContent = pending;
+            document.getElementById('processingCount').textContent = processing;
+            document.getElementById('externalCount').textContent = external;
+            document.getElementById('partsCount').textContent = parts; 
+            
+            console.log('📊 Statistics updated:', { pending, processing, parts, completed, cancelled });
+        }
+
+
+
+     
+
+        // === FILTERING ===
+        function applyFilters() {
+            const statusFilter = document.getElementById('statusFilter').value;
+            const priorityFilter = document.getElementById('priorityFilter').value;
+            const typeFilter = document.getElementById('typeFilter').value;
+            
+            filteredData = allData.filter(item => {
+                const statusMatch = !statusFilter || item.status === statusFilter;
+                const priorityMatch = !priorityFilter || item.priority === priorityFilter;
+                const typeMatch = !typeFilter || item.repairType === typeFilter;
+                
+                return statusMatch && priorityMatch && typeMatch;
+            });
+            
+            // ✨ [BERRY MOD] รีเซ็ตหน้าเป็น 1 เสมอเมื่อมีการกรองข้อมูลใหม่
+            currentPage = 1;
+
+            processChartData();
+            renderTable(); // จะเรนเดอร์เฉพาะหน้า 1 ของผลลัพธ์การกรอง
+            updateStatistics();
+            updateTechnicianChart();
+            
+            console.log('🔍 Filters applied:', { statusFilter, priorityFilter, typeFilter });
+            console.log('📋 Filtered data count:', filteredData.length);
+        }
+
+        // === TABLE RENDERING ===
+          function correctDate(dateStr) {
+    if (!dateStr || !dateStr.includes('/')) return dateStr;
+    const parts = dateStr.split('/');
+    if (parts.length !== 3) return dateStr;
+    let year = parseInt(parts[2]);
+    if (year > 2600) {
+        year -= 543;
+        if (year < 1900 || year > 2100) year = new Date().getFullYear() + 543;
+    } else if (year < 2400) {
+        year += 543;
+    }
+    return `${parts[0]}/${parts[1]}/${year}`;
+}
+
+    function getStatusClass(status) {
+            
+            const classes = {
+                'รอดำเนินการ': 'status-pending',
+                'กำลังดำเนินการ': 'status-processing',
+                'ดำเนินการภายนอก': 'status-external',
+                'พัสดุอยู่ระหว่างรอเบิก': 'status-parts', 
+                'เสร็จสิ้น': 'status-completed',
+                'ยกเลิก': 'status-cancelled'
+            };
+            return classes[status] || 'status-pending';
+        }
+
+  function getPriorityClass(priority) {
+    const classes = {
+        'ฉุกเฉิน': 'status-cancelled',   // แดง
+        'เร่งด่วน': 'status-pending',    // เหลือง
+        'ปานกลาง': 'status-processing',  // น้ำเงิน
+        'ไม่เร่งด่วน': 'status-completed'  // เขียว
+    };
+    return classes[priority] || 'status-processing';  // Fallback เป็นปานกลาง
+}
+
+function renderTable() {
+  const tableBody = document.getElementById('tableBody');
+  const dataTable = document.getElementById('dataTable');
+  const emptyState = document.getElementById('emptyState');
+  const paginationControls = document.getElementById('paginationControls');
+
+  if (!tableBody || !dataTable || !emptyState) return;
+
+  if (!filteredData || filteredData.length === 0) {
+    dataTable.style.display = 'none';
+    if (paginationControls) paginationControls.style.display = 'none';
+    emptyState.style.display = 'block';
+    tableBody.innerHTML = '';
+    return;
+  }
+
+  dataTable.style.display = 'table';
+  emptyState.style.display = 'none';
+
+  const totalRows = filteredData.length;
+  const totalPages = Math.ceil(totalRows / rowsPerPage);
+
+  if (currentPage < 1) currentPage = 1;
+  if (currentPage > totalPages) currentPage = totalPages;
+
+  const startIndex = (currentPage - 1) * rowsPerPage;
+  const endIndex = Math.min(startIndex + rowsPerPage, totalRows);
+  const currentData = filteredData.slice(startIndex, endIndex);
+
+  tableBody.innerHTML = '';
+
+  const myToken = ++tableRenderToken;
+
+  function appendRowsInBatch(items, start) {
+    if (myToken !== tableRenderToken) return;
+
+    const fragment = document.createDocumentFragment();
+    const batchSize = isMobileViewport() ? 4 : items.length;
+    const end = Math.min(start + batchSize, items.length);
+
+    for (let i = start; i < end; i++) {
+      const row = createTableRow(items[i]);
+      fragment.appendChild(row);
+    }
+
+    tableBody.appendChild(fragment);
+
+    if (end < items.length) {
+      nextFrame(function() {
+        appendRowsInBatch(items, end);
+      });
+    }
+  }
+
+  appendRowsInBatch(currentData, 0);
+
+  if (paginationControls) {
+    paginationControls.style.display = 'flex';
+
+    const pageInfo = document.getElementById('pageInfo');
+    const prevBtn = document.getElementById('prevPageBtn');
+    const nextBtn = document.getElementById('nextPageBtn');
+
+    if (pageInfo) {
+      pageInfo.textContent = 'แสดง ' + (startIndex + 1) + ' - ' + endIndex + ' จาก ' + totalRows + ' รายการ';
+    }
+
+    if (prevBtn) prevBtn.disabled = currentPage <= 1;
+    if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
+  }
+}
+        // ✨ [BERRY MOD] ฟังก์ชันเปลี่ยนหน้า
+        function changePage(direction) {
+            currentPage += direction;
+            renderTable(); // เรนเดอร์ใหม่เฉพาะส่วนข้อมูล
+        }
+
+// === TABLE ROW CREATION (ฉบับแก้ไข onclick และ เพิ่ม data-label) ===
+// [ANCHOR: CLIENT: DASHBOARD_TABLE]
+// CHANGE: แก้ไข createTableRow เพื่อแสดงวันที่/เวลาที่ Server ส่งมาให้ และคืนค่าปุ่ม Actions ครบถ้วน
+function createTableRow(item) {
+    const row = document.createElement('tr');
+    row.className = 'fade-in';
+    const sequenceEscaped = (item.sequenceNumber || '').replace(/'/g, "\\'");
+    
+    // ตรวจสอบข้อมูลรูปภาพ
+    const validImageUrls = (item.imageUrls && Array.isArray(item.imageUrls)) ?
+        item.imageUrls.filter(url => url && typeof url === 'string' && url.trim() !== '') : [];
+    const hasImages = validImageUrls.length > 0;
+    
+    // สร้างปุ่ม Actions HTML เต็มรูปแบบ
+    let actionsHTML = '';
+
+    // ปุ่มดูเอกสาร (PDF)
+    if (item.url && item.url !== '#' && item.url.trim()) { 
+        actionsHTML += `<a href="${item.url}" target="_blank" class="action-btn view" title="ดูเอกสาร"><i class="fas fa-file-alt action-icon icon-view"></i> ดู</a>`; 
+    }
+    
+    // ปุ่มดูรูปภาพ
+    if (hasImages) { 
+        actionsHTML += `<button class="action-btn images" onclick="showImageGallery('${sequenceEscaped}')" title="ดูรูปภาพ (${validImageUrls.length} รูป)"><i class="fas fa-camera-retro action-icon icon-images"></i> รูป (${validImageUrls.length})</button>`; 
+    } else { 
+        actionsHTML += `<button class="action-btn images" disabled title="ไม่มีรูปภาพประกอบ"><i class="fas fa-camera-slash action-icon icon-images"></i> ไม่มีรูป</button>`; 
+    }
+    
+    // ปุ่มรายละเอียด (แสดงตลอด)
+    actionsHTML += `<button class="action-btn info" onclick="showDetail('${sequenceEscaped}')" title="ดูรายละเอียด"><i class="fas fa-eye action-icon icon-detail"></i> รายละเอียด</button>`;
+    
+    // ปุ่มสำหรับ Admin/Technician (แก้ไข/ลบ)
+    if (isLoggedIn && currentUser) {
+        if (currentUser.role === 'admin' || currentUser.role === 'technician') {
+            actionsHTML += `<button class="action-btn edit" onclick="updateStatus('${sequenceEscaped}')" title="แก้ไขสถานะ"><i class="fas fa-wrench action-icon icon-edit"></i> แก้ไข</button>`;
+            actionsHTML += `<button class="action-btn delete" onclick="deleteRepair('${sequenceEscaped}')" title="ลบรายการ"><i class="fas fa-trash-alt action-icon icon-delete"></i> ลบ</button>`;
+        }
+        // ปุ่มมอบหมายงาน (เฉพาะ Admin)
+        if (currentUser.role === 'admin') {
+            actionsHTML += `<button class="action-btn assign" onclick="assignTask('${sequenceEscaped}')" title="มอบหมายงานให้ช่าง"><i class="fas fa-user-check action-icon icon-assign"></i> มอบหมาย</button>`;
+        }
+    }
+    
+    const statusClass = getStatusClass(item.status);
+    
+    // CHANGE: item.date ตอนนี้เป็น String "dd/MM/yyyy HH:mm น." จาก Server แล้ว นำมาแสดงได้เลย
+    row.innerHTML = `
+        <td data-label="เลขที่:"><div class="table-row-number"><i class="fas fa-hashtag"></i>${item.sequenceNumber || '-'}</div></td>
+        <td data-label="วันที่/เวลา:">
+            <div class="table-date" style="flex-direction: column; align-items: flex-start; gap: 2px;">
+                <div style="display:flex; align-items:center; gap:5px;">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span style="font-weight:600; font-size: 0.9em;">${item.date || '-'}</span>
+                </div>
+            </div>
+        </td>
+        <td data-label="ผู้แจ้งซ่อม:"><div class="table-requester"><i class="fas fa-user"></i><span>${item.requesterName || '-'}</span></div></td>
+        <td data-label="รายการ:"><div class="table-repair-item"><i class="fas fa-tools"></i><div>${item.repairItem || '-'}</div></div></td>
+        <td data-label="สถานที่:"><div class="table-location"><i class="fas fa-map-marker-alt"></i><div>${item.location || '-'}</div></div></td>
+        <td data-label="ผู้รับผิดชอบ:"><div class="table-technician"><i class="fas fa-user-cog"></i><span>${item.assignedTechnician || '-'}</span></div></td>
+        <td data-label="สถานะ:"><span class="status-badge ${statusClass}">${item.status || 'ไม่ระบุ'}</span></td>
+        <td data-label="การจัดการ:"><div class="actions">${actionsHTML}</div></td>
+    `;
+    return row;
+}
+
+// [ANCHOR: CLIENT: MODAL_DETAIL]
+// CHANGE: แก้ไข showDetail ให้แสดงวันที่แบบเต็ม และแสดงข้อมูลครบถ้วน
+function showDetail(sequenceNumber) {
+    const item = allData.find(d => d.sequenceNumber === sequenceNumber);
+    if (!item) { 
+        showAlert('error', 'ไม่พบข้อมูล'); 
+        return; 
+    }
+    
+    const modal = document.getElementById('detailModal');
+    const content = document.getElementById('detailContent');
+    
+    // ใช้ item.date ตรงๆ ได้เลย เพราะ Server Format มาให้แล้ว
+    content.innerHTML = `
+        <h3>รายละเอียดการแจ้งซ่อม: ${item.sequenceNumber}</h3>
+        <div style="margin: 1.5rem 0;">
+            <p><strong>📅 วันที่/เวลาแจ้ง:</strong> ${item.date || '-'}</p>
+            <p><strong>👤 ผู้แจ้ง:</strong> ${item.requesterName || '-'}</p>
+            <p><strong>📞 เบอร์โทร:</strong> ${item.phoneNumber || '-'}</p>
+            <p><strong>🔧 ประเภทงาน:</strong> ${item.repairType || '-'}</p>
+            <p><strong>📝 รายการซ่อม:</strong> ${item.repairItem || '-'}</p>
+            <p><strong>📄 รายละเอียด:</strong> ${item.description || '-'}</p>
+            <p><strong>📍 สถานที่:</strong> ${item.location || '-'}</p>
+            <p><strong>⚡ ความเร่งด่วน:</strong> ${item.priority || '-'}</p>
+            <p><strong>👨‍🔧 ผู้รับผิดชอบ:</strong> ${item.assignedTechnician || '-'}</p>
+            <p><strong>📊 สถานะ:</strong> <span class="status-badge ${getStatusClass(item.status)}">${item.status || '-'}</span></p>
+            <p><strong>📝 หมายเหตุ:</strong> ${item.notes || '-'}</p>
+            ${item.imageUrls && item.imageUrls.length > 0 ? `<p><strong>📷 รูปภาพ:</strong> ${item.imageUrls.length} รูป</p>` : ''}
+        </div>
+        <div class="dialog-buttons">
+            ${item.imageUrls && item.imageUrls.length > 0 ? `<button class="dialog-btn primary" onclick="closeDetailModal(); showImageGallery('${item.sequenceNumber}');">ดูรูปภาพ</button>` : ''}
+            <button class="dialog-btn cancel" onclick="closeDetailModal()">ปิด</button>
+        </div>
+    `;
+    modal.classList.add('active');
+}
+
+function showImageGallery(sequenceNumber) {
+    const item = allData.find(d => d.sequenceNumber === sequenceNumber);
+    if (!item || !item.imageUrls || item.imageUrls.length === 0) {
+        showAlert('info', 'ไม่มีรูปภาพสำหรับรายการนี้ค่ะเหมียว~');
+        return;
+    }
+
+    const modal = document.getElementById('imageGalleryModal');
+    const header = document.getElementById('galleryHeader');
+    const grid = document.getElementById('galleryGrid');
+    
+    header.innerHTML = `
+        <h3 class="dialog-title">
+            <i class="fas fa-images" style="color: #8b5cf6;"></i> 
+            รูปภาพประกอบ: ${sequenceNumber}
+        </h3>
+        <p class="dialog-subtitle">พบ ${item.imageUrls.length} รูปภาพ</p>
+    `;
+
+    // แสดงรูปภาพใน grid layout
+    grid.innerHTML = '';
+    item.imageUrls.forEach((url, index) => {
+        if (!url || url.trim() === '') return;
+        
+        const imageItem = document.createElement('div');
+        imageItem.className = 'image-item';
+        imageItem.style.position = 'relative';
+        
+        imageItem.innerHTML = `
+            <img src="${url}" 
+                 alt="รูปที่ ${index + 1}" 
+                 loading="lazy"
+                 onload="this.style.opacity='1'"
+                 onerror="this.src='https://via.placeholder.com/150/ef4444/ffffff?text=Load+Failed'; this.style.opacity='1'"
+                 style="width:100%; height:100%; object-fit:cover; border-radius:8px; opacity:0; transition:opacity 0.3s;">
+            <div class="image-overlay">
+                <i class="fas fa-search-plus"></i> รูปที่ ${index + 1}
+            </div>
+        `;
+        
+        imageItem.onclick = () => showImageModal(url);
+        grid.appendChild(imageItem);
+    });
+    
+    modal.classList.add('active');
+}
+
+function showImageModal(imageUrl) {
+    const modal = document.getElementById('imageModal');
+    const modalImage = document.getElementById('modalImage');
+    if (!modal || !modalImage || !imageUrl) return;
+
+    modal.classList.add('active');
+    
+    // ✨ ใช้ imageUrl ที่ได้รับมาได้เลยทันที ✨
+    modalImage.src = imageUrl;
+    
+    // (Optional) สามารถใส่ placeholder ไว้ก่อนได้เผื่อเน็ตช้า
+    modalImage.onerror = () => {
+        modalImage.src = 'https://via.placeholder.com/800/ef4444/ffffff?text=Image%20Failed%20to%20Load';
+    };
+}
+
+        function closeImageModal() { 
+            document.getElementById('imageModal')?.classList.remove('active'); 
+        }
+
+        function closeImageGalleryModal() { 
+            document.getElementById('imageGalleryModal')?.classList.remove('active'); 
+        }
+
+        function closeDetailModal() { 
+            document.getElementById('detailModal')?.classList.remove('active'); 
+        }
+
+        function closeAllModals() {
+            closeImageModal();
+            closeImageGalleryModal();
+            closeDetailModal();
+        }
+
+        // === KEYBOARD EVENTS ===
+        document.addEventListener('keydown', (e) => {
+            if (e.key === "Escape") {
+                closeAllModals();
+            }
+        });
+
+          function handleEditImageSelect(input) {
+            const files = Array.from(input.files);
+            if (files.length === 0) return;
+
+            // ตรวจสอบจำนวนรูป
+            if (editSelectedImages.length + files.length > 3) {
+                showAlert('error', 'อัปโหลดได้สูงสุด 3 รูปเท่านั้นค่ะ');
+                return;
+            }
+
+            files.forEach(file => {
+                if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                    showAlert('error', `ไฟล์ ${file.name} ใหญ่เกินไป (max 5MB)`);
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    editSelectedImages.push({
+                        file: file,
+                        dataURL: e.target.result
+                    });
+                    renderEditImagePreview();
+                };
+                reader.readAsDataURL(file);
+            });
+            input.value = ''; // Reset input
+        }
+
+               function renderEditImagePreview() {
+            const container = document.getElementById('editImagePreview');
+            if (!container) return;
+            
+            container.innerHTML = ''; // เคลียร์ของเก่าทิ้ง
+            
+            if (editSelectedImages.length === 0) {
+                // ถ้าไม่มีรูป อาจจะซ่อน container หรือปล่อยว่างไว้
+                container.style.display = 'none';
+                return;
+            } else {
+                container.style.display = 'grid'; // แสดงผลแบบ Grid
+            }
+            
+            editSelectedImages.forEach((img, index) => {
+                // สร้าง Element
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'edit-preview-item';
+                
+                itemDiv.innerHTML = `
+                    <img src="${img.dataURL}" alt="preview ${index + 1}">
+                    <button type="button" class="edit-remove-btn" onclick="removeEditImage(${index})" title="ลบรูปนี้">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                
+                container.appendChild(itemDiv);
+            });
+        }
+
+        /* ============================================================
+           [BERRY-MOD] 🛠️ SECTION: MODAL & EVENT HANDLERS (ฉบับสมบูรณ์)
+           รวบรวมฟังก์ชันจัดการ Modal และ Event Listeners ไว้ที่นี่
+           ============================================================ */
+
+        // ---------------------------------------------------------
+        // 1. 🖼️ Image Handling Helpers (จัดการรูปภาพใน Edit Modal)
+        // ---------------------------------------------------------
+        function removeEditImage(index) {
+            editSelectedImages.splice(index, 1);
+            renderEditImagePreview();
+        }
+
+        function resetEditImages() {
+            editSelectedImages = [];
+            const previewContainer = document.getElementById('editImagePreview');
+            if (previewContainer) {
+                previewContainer.innerHTML = '';
+                // previewContainer.style.display = 'none'; // ไม่ต้องซ่อน container เพราะ CSS จัดการแล้ว
+            }
+            const fileInput = document.getElementById('editImageInput');
+            if (fileInput) fileInput.value = '';
+        }
+
+        function renderImagesTo(containerEl, imagesJson) {
+            try {
+                containerEl.innerHTML = '';
+                if (!imagesJson) { 
+                    containerEl.innerHTML = '<div class="chart-no-data"><i class="fa-regular fa-image"></i><h4>ไม่มีรูปประกอบ</h4></div>'; 
+                    return; 
+                }
+
+                let arr = [];
+                try { arr = JSON.parse(imagesJson); } catch (_) { arr = []; }
+                if (!Array.isArray(arr)) arr = [];
+
+                if (arr.length === 0) {
+                    containerEl.innerHTML = '<div class="chart-no-data"><i class="fa-regular fa-image"></i><h4>ไม่มีรูปประกอบ</h4></div>';
+                    return;
+                }
+
+                arr.forEach(raw => {
+                    const url = buildImageUrl(raw); // ต้องมีฟังก์ชันนี้ในระบบ หรือใช้ convertToDirectLink
+                    if (!url) return;
+                    
+                    const wrap = document.createElement('div');
+                    wrap.className = 'image-preview';
+                    
+                    const img = document.createElement('img');
+                    img.loading = 'lazy';
+                    img.src = url;
+                    img.alt = 'รูปประกอบ';
+                    img.onclick = () => window.open(url, '_blank'); // คลิกเพื่อดูภาพใหญ่
+                    img.style.cursor = 'pointer';
+                    
+                    img.onerror = () => { 
+                        wrap.innerHTML = '<div class="chart-no-data" style="font-size:0.8rem"><i class="fa-solid fa-triangle-exclamation"></i><p>Error</p></div>'; 
+                    };
+                    
+                    wrap.appendChild(img);
+                    containerEl.appendChild(wrap);
+                });
+
+            } catch (err) {
+                console.error('renderImagesTo error:', err);
+                containerEl.innerHTML = '<div class="chart-no-data"><i class="fa-regular fa-image"></i><h4>โหลดรูปไม่สำเร็จ</h4></div>';
+            }
+        }
+
+        // ---------------------------------------------------------
+        // 2. 📂 Modal Openers (ฟังก์ชันเปิด Modal ต่างๆ)
+        // ---------------------------------------------------------
+        
+        // 2.1 เปิด Modal แก้ไขสถานะ
+        function updateStatus(sequenceNumber) {
+            if (!isLoggedIn || (currentUser.role !== 'admin' && currentUser.role !== 'technician')) {
+                showAlert('error', 'คุณไม่มีสิทธิ์ในการแก้ไขข้อมูล');
+                return;
+            }
+            
+            const item = allData.find(d => d.sequenceNumber === sequenceNumber);
+            if (!item) {
+                showAlert('error', 'ไม่พบข้อมูลรายการนี้');
+                return;
+            }
+            
+            activeSequenceNumber = sequenceNumber;
+            
+           // Setup Form Data
+            document.getElementById('editSequenceNumber').textContent = item.sequenceNumber;
+            document.getElementById('editHiddenSequenceNumber').value = item.sequenceNumber;
+            document.getElementById('editStatus').value = item.status;
+            document.getElementById('editNotes').value = item.notes || '';
+            
+            // เพิ่มการ Prefill วันที่และเวลาด้วยรูปแบบ พ.ศ. (วว/ดด/ปปปป HH:mm)
+            const now = new Date();
+            const d = String(now.getDate()).padStart(2, '0');
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const y = now.getFullYear() + 543; // แปลงเป็น พ.ศ.
+            const h = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('editUpdateDate').value = `${d}/${m}/${y} ${h}:${min}`;
+            
+            // Reset Image Data
+            resetEditImages();
+            renderEditImagePreview(); // เรียกเพื่อให้แน่ใจว่า UI สะอาด
+            
+            document.getElementById('editModal').classList.add('active');
+        }
+
+        // 2.2 เปิด Modal ยืนยันการลบ
+        function deleteRepair(sequenceNumber) {
+            if (!isLoggedIn || (currentUser.role !== 'admin' && currentUser.role !== 'technician')) {
+                showAlert('error', 'เฉพาะผู้ดูแลระบบและช่างเท่านั้นที่สามารถลบรายการได้');
+                return;
+            }
+            
+            const item = allData.find(d => d.sequenceNumber === sequenceNumber);
+            if (!item) {
+                showAlert('error', 'ไม่พบข้อมูลรายการนี้');
+                return;
+            }
+            
+            activeSequenceNumber = sequenceNumber;
+            document.getElementById('deleteSequenceNumber').textContent = item.sequenceNumber;
+            document.getElementById('deleteRepairItem').textContent = item.repairItem;
+            document.getElementById('deleteModal').classList.add('active');
+        }
+
+        // 2.3 เปิด Modal มอบหมายงาน
+        function assignTask(sequenceNumber) {
+            if (!isLoggedIn || currentUser.role !== 'admin') {
+                showAlert('error', 'เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถมอบหมายงานได้');
+                return;
+            }
+            
+            const item = allData.find(d => d.sequenceNumber === sequenceNumber);
+            if (!item) {
+                showAlert('error', 'ไม่พบข้อมูลรายการนี้');
+                return;
+            }
+            
+            activeSequenceNumber = sequenceNumber;
+            document.getElementById('assignSequenceNumber').textContent = item.sequenceNumber;
+            document.getElementById('assignHiddenSequenceNumber').value = item.sequenceNumber;
+            
+            populateAssignTechnicianOptions(item.assignedTechnician);
+            
+            document.getElementById('assignModal').classList.add('active');
+        }
+
+        // ---------------------------------------------------------
+        // 3. 🚪 Modal Closers (ฟังก์ชันปิด Modal)
+        // ---------------------------------------------------------
+        function closeEditModal() { 
+            document.getElementById('editModal')?.classList.remove('active'); 
+            activeSequenceNumber = null; 
+            resetEditImages(); // ⭐ สำคัญ: ล้างข้อมูลรูปภาพค้าง
+        }
+
+        function closeDeleteModal() { 
+            document.getElementById('deleteModal')?.classList.remove('active'); 
+            activeSequenceNumber = null; 
+        }
+
+        function closeAssignModal() { 
+            document.getElementById('assignModal')?.classList.remove('active'); 
+            activeSequenceNumber = null; 
+        }
+
+        // ---------------------------------------------------------
+        // 4. 🧩 UI Helpers (ฟังก์ชันช่วยทำงานอื่นๆ)
+        // ---------------------------------------------------------
+        function populateAssignTechnicianOptions(currentTechnician) {
+            const select = document.getElementById('assignTechnician');
+            select.innerHTML = '';
+            
+            const noAssignOption = document.createElement('option');
+            noAssignOption.value = '';
+            noAssignOption.textContent = '-- เลือกช่างผู้รับผิดชอบ --';
+            select.appendChild(noAssignOption);
+            
+            if (availableTechnicians && availableTechnicians.length > 0) {
+                availableTechnicians.forEach(tech => {
+                    const option = document.createElement('option');
+                    option.value = tech;
+                    option.textContent = tech;
+                    if (tech === currentTechnician) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+            } else {
+                 const noTechOption = document.createElement('option');
+                 noTechOption.value = '';
+                 noTechOption.textContent = 'ไม่พบข้อมูลช่าง';
+                 noTechOption.disabled = true;
+                 select.appendChild(noTechOption);
+            }
+        }
+
+        // ---------------------------------------------------------
+        // 5. ⚡ EVENT LISTENERS (จัดการการกดปุ่มต่างๆ)
+        // ---------------------------------------------------------
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            // เราใช้ DOMContentLoaded หรือตรวจสอบ element ก่อน addEventListener เพื่อความชัวร์
+
+            // 5.1 ฟอร์มแก้ไขสถานะ (Edit Form)
+            const editForm = document.getElementById('editForm');
+            if (editForm) {
+                editForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const form = e.target;
+                    const sequenceNumber = form.elements.sequenceNumber.value;
+                    const newStatus = form.elements.status.value;
+                    const rawUpdateDate = form.elements.updateDate.value.trim(); // รับค่า text พ.ศ.
+                    const notes = form.elements.notes.value;
+                    const assignedTechnician = null;
+                    
+                    // ตรวจสอบและแปลงรูปแบบวันที่ พ.ศ. กลับเป็น Date Object
+                    let updateDateObj = null;
+                    const dateMatch = rawUpdateDate.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})\s+(\d{1,2})[:.](\d{2})/);
+                    if (dateMatch) {
+                        const day = parseInt(dateMatch[1], 10);
+                        const month = parseInt(dateMatch[2], 10) - 1; 
+                        let year = parseInt(dateMatch[3], 10);
+                        if (year > 2400) year -= 543; // แปลง พ.ศ. กลับเป็น ค.ศ. ให้ Server
+                        const hours = parseInt(dateMatch[4], 10);
+                        const minutes = parseInt(dateMatch[5], 10);
+                        updateDateObj = new Date(year, month, day, hours, minutes);
+                    } else {
+                        showAlert('error', 'รูปแบบวันที่ไม่ถูกต้อง กรุณาระบุแบบ วว/ดด/ปปปป HH:mm');
+                        return; // หยุดการทำงานถ้าผู้ใช้กรอกผิดฟอร์แมต
+                    }
+
+                    // เตรียมรูปภาพ
+                    let base64Images =[];
+                    if (editSelectedImages.length > 0) {
+                        base64Images = editSelectedImages.map(img => img.dataURL); 
+                    }
+
+                    //[แก้ไข: แพ็กข้อมูลเป็น Object เพื่อความชัวร์และรองรับวันที่]
+                    const payload = {
+                        sequenceNumber: sequenceNumber,
+                        newStatus: newStatus,
+                        updateDate: updateDate, // ส่งวันที่ไปด้วย
+                        notes: notes,
+                        technician: assignedTechnician,
+                        currentUser: currentUser,
+                        base64Images: base64Images
+                    };
+
+                    showAlert('info', 'กำลังอัปเดตข้อมูลและอัปโหลดรูปภาพ...');
+                    const saveBtn = document.getElementById('saveChangesBtn');
+                    if (saveBtn) saveBtn.disabled = true;
+
+                    google.script.run
+                        .withSuccessHandler(function(result) {
+                            if (saveBtn) saveBtn.disabled = false;
+                            if (result && result.success) {
+                                showAlert('success', 'อัปเดตสถานะเรียบร้อยแล้ว');
+                                closeEditModal();
+                                loadData(); 
+                            } else {
+                                showAlert('error', 'เกิดข้อผิดพลาด: ' + (result ? result.error : 'ไม่ทราบสาเหตุ'));
+                            }
+                        })
+                        .withFailureHandler(function(error) {
+                            if (saveBtn) saveBtn.disabled = false;
+                            showAlert('error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error.message);
+                        })
+                        .updateRepairStatus(payload); // [แก้ไข: ส่งก้อน Payload ไปเลย]
+                });
+            }
+
+            // 5.2 ปุ่มยืนยันการลบ (Confirm Delete)
+            const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+            if (confirmDeleteBtn) {
+                confirmDeleteBtn.addEventListener('click', function() {
+                    if (!activeSequenceNumber) return;
+                    
+                    showAlert('info', 'กำลังลบข้อมูล...');
+                    this.disabled = true;
+                    
+                    google.script.run
+                        .withSuccessHandler((result) => {
+                            this.disabled = false;
+                            if (result && result.success) {
+                                showAlert('success', 'ลบรายการเรียบร้อยแล้ว');
+                                closeDeleteModal();
+                                loadData(); 
+                            } else {
+                                showAlert('error', 'เกิดข้อผิดพลาด: ' + (result ? result.error : 'ไม่ทราบสาเหตุ'));
+                            }
+                        })
+                        .withFailureHandler((error) => {
+                            this.disabled = false;
+                            showAlert('error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error.message);
+                        })
+                        .deleteRepair(activeSequenceNumber, currentUser);
+                });
+            }
+
+            // 5.3 ฟอร์มมอบหมายงาน (Assign Form)
+            const assignForm = document.getElementById('assignForm');
+            if (assignForm) {
+                assignForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const form = e.target;
+                    const sequenceNumber = form.elements.sequenceNumber.value;
+                    const assignedTechnician = form.elements.technician.value;
+                    
+                    const newStatus = "กำลังดำเนินการ";
+                    const notes = null;
+
+                    if (!assignedTechnician) {
+                        showAlert('error', 'กรุณาเลือกช่างผู้รับผิดชอบ');
+                        return;
+                    }
+
+                    showAlert('info', 'กำลังบันทึกการมอบหมาย...');
+                    const assignBtn = document.getElementById('saveAssignmentBtn');
+                    if (assignBtn) assignBtn.disabled = true;
+
+                    google.script.run
+                        .withSuccessHandler(function(result) {
+                            if (assignBtn) assignBtn.disabled = false;
+                            if (result && result.success) {
+                                showAlert('success', 'มอบหมายงานเรียบร้อยแล้ว');
+                                closeAssignModal();
+                                loadData();
+                            } else {
+                                showAlert('error', 'เกิดข้อผิดพลาด: ' + (result ? result.error : 'ไม่ทราบสาเหตุ'));
+                            }
+                        })
+                        .withFailureHandler(function(error) {
+                            if (assignBtn) assignBtn.disabled = false;
+                            showAlert('error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error.message);
+                        })
+                        .updateRepairStatus(sequenceNumber, newStatus, assignedTechnician, notes, currentUser);
+                });
+            }
+        });
+                   // === DEBUG FUNCTIONS ===
+        function debugImageData() {
+            console.log('🐛 === DEBUG IMAGE DATA ===');
+            console.log('📊 Total items:', allData.length);
+            
+            allData.forEach((item, index) => {
+                if (item.imageUrls && item.imageUrls.length > 0) {
+                    console.log(`📷 Item ${index + 1} (${item.sequenceNumber}):`, {
+                        imageUrls: item.imageUrls,
+                        imageCount: item.imageUrls.length,
+                        firstUrl: item.imageUrls[0]
+                    });
+                }
+            });
+            
+            const itemsWithImages = allData.filter(item => item.imageUrls && item.imageUrls.length > 0);
+            console.log(`🖼️ Items with images: ${itemsWithImages.length}/${allData.length}`);
+            
+            showAlert('info', `🐛 Debug: พบรูปภาพในระบบ ${itemsWithImages.length} รายการ จากทั้งหมด ${allData.length} รายการ`);
+        }
+
+              function loadReportMonths() {
+            console.log('🗓️ Loading available report months...');
+            try {
+                if (typeof google !== 'undefined' && google.script && google.script.run) {
+                    google.script.run
+                        .withSuccessHandler(function(result) {
+                            if (result && result.months) {
+                                console.log('Received months data:', result.months);
+                                populateMonthSelector(result.months);
+                            } else {
+                                 populateMonthSelector([]); // ส่ง Array ว่างไป
+                            }
+                        })
+                        .withFailureHandler(function(error) {
+                            console.error('❌ Error loading months:', error);
+                            showAlert('error', 'ไม่สามารถโหลดรายการเดือนสำหรับสร้างรายงานได้');
+                            populateMonthSelector([]);
+                        })
+                        .getAvailableReportMonths();
+                }
+            } catch (error) {
+                console.error('❌ Error in loadReportMonths:', error);
+            }
+        }
+
+        function populateMonthSelector(months) {
+            const selector = document.getElementById('monthSelector');
+            if (!selector) return;
+            
+            selector.innerHTML = '<option value="">-- เลือกเดือน --</option>';
+            if (!months || months.length === 0) {
+                const noDataOption = document.createElement('option');
+                noDataOption.value = '';
+                noDataOption.textContent = 'ไม่มีข้อมูลเดือนให้เลือก';
+                noDataOption.disabled = true;
+                selector.appendChild(noDataOption);
+                return;
+            }
+            
+            months.forEach(month => {
+                const option = document.createElement('option');
+                option.value = `${month.year}-${month.month}`;
+                option.textContent = month.label;
+                selector.appendChild(option);
+            });
+            
+            selector.addEventListener('change', function() {
+                document.getElementById('generateReportBtn').disabled = !this.value;
+            });
+        }
+
+     // [ANCHOR: REPORT-CLIENT-BLOCK-REPLACE]
+// CHANGE: รวมให้เหลือ 1 ชุดเท่านั้น (กันฟังก์ชันซ้ำทับกัน) + เปิด PDF จาก result.pdfUrl + ตัด demo/mock ออก
+
+function ensureBuddhistYear(year) {
+  // [ANCHOR: REPORT-YEAR-NORMALIZE]
+  // CHANGE: รวม logic แปลงปีไว้จุดเดียว
+  var y = (typeof year === 'number') ? year : parseInt(year, 10);
+
+  if (!isFinite(y)) return (new Date().getFullYear() + 543);
+
+  // ถ้าเป็น ค.ศ. ให้แปลงเป็น พ.ศ.
+  if (y < 2400) return y + 543;
+
+  // ถ้าเลขปีเพี้ยนเกินจริง ให้พยายามแก้กลับ (กรณีบวก 543 ซ้ำ)
+  if (y > 3000) {
+    // ลดทีละ 543 จนเข้าโซนสมเหตุสมผล
+    while (y > 3000) y -= 543;
+    if (y < 2400) y += 543;
+  }
+
+  return y;
+}
+
+//[ANCHOR: REPORT-DOUBLE-SUBMIT]
+function generateMonthlyReport() {
+  console.log('🗓️ Starting monthly report generation...');
+
+  var selector = document.getElementById('monthSelector');
+  var technicianSelector = document.getElementById('reportTechnicianSelector');
+  var generateBtn = document.getElementById('generateReportBtn');
+
+  function normalizeTechnicianName(value) {
+    return String(value == null ? '' : value)
+      .replace(/[\r\n]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function resetGenerateButton() {
+    if (!generateBtn) return;
+    generateBtn.disabled = false;
+    generateBtn.removeAttribute('aria-busy');
+    generateBtn.innerHTML = '<i class="fas fa-file-alt"></i> สร้างรายงาน';
+  }
+
+  console.log('🔍 monthSelector found:', !!selector);
+  console.log('🔍 reportTechnicianSelector found:', !!technicianSelector);
+  console.log('🔍 generateReportBtn found:', !!generateBtn);
+
+  if (!selector || !selector.value) {
+    showAlert('error', 'กรุณาเลือกเดือนที่ต้องการสร้างรายงาน');
+    return;
+  }
+
+  var selectedTechnician = '';
+  if (technicianSelector && !technicianSelector.disabled) {
+    selectedTechnician = normalizeTechnicianName(technicianSelector.value || '');
+  }
+
+  console.log('📅 Selected month dropdown:', selector.value);
+  console.log('👨‍🔧 Selected technician dropdown:', selectedTechnician || 'รวมทุกคน');
+  console.log('📌 Technician selector disabled state:', technicianSelector ? technicianSelector.disabled : 'not-found');
+
+  var parts = selector.value.split('-');
+  if (parts.length !== 2) {
+    showAlert('error', 'รูปแบบข้อมูลเดือนไม่ถูกต้อง');
+    return;
+  }
+
+  var yearRaw = parseInt(parts[0], 10);
+  var month = parseInt(parts[1], 10);
+
+  if (!isFinite(month) || month < 1 || month > 12) {
+    showAlert('error', 'เดือนไม่ถูกต้อง');
+    return;
+  }
+
+  var year = ensureBuddhistYear(yearRaw);
+  if (generateBtn && generateBtn.disabled) return;
+
+  if (generateBtn) {
+    generateBtn.disabled = true;
+    generateBtn.setAttribute('aria-busy', 'true');
+    generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังสร้าง...';
+  }
+
+  var monthName = (typeof MONTHS_TH !== 'undefined' && MONTHS_TH[month - 1]) ? MONTHS_TH[month - 1] : ('เดือน ' + month);
+  var reportLabel = selectedTechnician
+    ? ('รายงานของ ' + selectedTechnician + ' เดือน ' + monthName + ' ' + year)
+    : ('รายงานรวมทุกคน เดือน ' + monthName + ' ' + year);
+
+  showAlert('info', 'กำลังสร้าง' + reportLabel + ' กรุณารอสักครู่...');
+
+  console.log('📦 Report payload before send:', {
+    year: year,
+    month: month,
+    technician: selectedTechnician || '',
+    mode: selectedTechnician ? 'single-technician' : 'all-technicians'
+  });
+  console.log('🔘 Generate button state before request:', generateBtn ? generateBtn.disabled : 'no-button');
+
+  try {
+    if (!(typeof google !== 'undefined' && google.script && google.script.run)) {
+      throw new Error('Google Apps Script ไม่พร้อมใช้งาน');
+    }
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        resetGenerateButton();
+
+        console.log('✅ Monthly report result:', result);
+        console.log('🔘 Generate button state after success:', generateBtn ? generateBtn.disabled : 'no-button');
+
+        if (result && result.success) {
+          if (result.isEmpty) {
+            console.log('📭 Empty report result for technician:', selectedTechnician || 'รวมทุกคน');
+            showAlert('info', result.message || 'ไม่พบรายการแจ้งซ่อมในเงื่อนไขที่เลือก');
+
+            if (result.reportData) {
+              result.reportData.year = year;
+              showReportPreview(result.reportData, true, null);
+            }
+            return;
+          }
+
+          showAlert('success', '✅ สร้างรายงาน "' + (result.docName || '') + '" เรียบร้อยแล้ว');
+
+          if (result.pdfUrl) {
+            window.open(result.pdfUrl, '_blank');
+          } else {
+            showAlert('error', 'สร้างรายงานสำเร็จ แต่ไม่พบลิงก์ PDF');
+          }
+
+          if (result.reportData) {
+            result.reportData.year = year;
+            showReportPreview(result.reportData, false, result.pdfUrl);
+          }
+        } else {
+          var errorMsg = (result && result.error) ? result.error : 'ไม่ทราบสาเหตุ';
+          showAlert('error', '❌ เกิดข้อผิดพลาดในการสร้างรายงาน: ' + errorMsg);
+        }
+      })
+      .withFailureHandler(function(error) {
+        resetGenerateButton();
+
+        console.error('❌ Monthly report server error:', error);
+        console.log('🔘 Generate button state after failure:', generateBtn ? generateBtn.disabled : 'no-button');
+
+        var msg = (error && error.message) ? error.message : String(error || '');
+        showAlert('error', '❌ เกิดข้อผิดพลาดในการติดต่อเซิร์ฟเวอร์: ' + msg);
+      })
+      .createMonthlyReportDocument(year, month, selectedTechnician);
+
+  } catch (error) {
+    resetGenerateButton();
+
+    console.error('❌ Monthly report client error:', error);
+    console.log('🔘 Generate button state after catch:', generateBtn ? generateBtn.disabled : 'no-button');
+
+    showAlert('error', '❌ เกิดข้อผิดพลาด: ' + (error && error.message ? error.message : String(error)));
+  }
+}
+// [ANCHOR: REPORT-PREVIEW]
+function showReportPreview(reportData, isEmpty, pdfUrl) {
+  var previewDiv = document.getElementById('reportPreview');
+  if (!previewDiv) return;
+
+  var previewContent = previewDiv.querySelector('.report-preview-content');
+  if (!previewContent) {
+    previewContent = document.createElement('div');
+    previewContent.className = 'report-preview-content';
+    previewDiv.innerHTML = '';
+    previewDiv.appendChild(previewContent);
+  }
+
+  if (!reportData) {
+    previewContent.innerHTML = '<div style="background:#f8fafc;padding:1rem;border-left:4px solid #9ca3af;color:#6b7280;border-radius:12px;">ไม่มีข้อมูลตัวอย่างรายงานสำหรับแสดงผล</div>';
+    previewDiv.style.display = 'block';
+    return;
+  }
+
+  var displayYear = ensureBuddhistYear(reportData.year);
+  var monthName = reportData.monthName || '';
+
+  if (isEmpty) {
+    previewContent.innerHTML =
+      '<div style="background:#fef2f2;border-radius:12px;padding:2.5rem;text-align:center;border:2px dashed #fca5a5;margin-top:1.5rem;display:flex;flex-direction:column;align-items:center;">' +
+        '<i class="fas fa-box-open" style="font-size:3.5rem;color:#f87171;margin-bottom:1rem;opacity:0.8;"></i>' +
+        '<h4 style="color:#991b1b;margin:0 0 0.5rem 0;font-size:1.25rem;">ไม่มีรายการแจ้งซ่อม</h4>' +
+        '<p style="color:#b91c1c;margin:0;font-size:1rem;">ระบบตรวจไม่พบข้อมูลในเดือน <b>' + monthName + ' ' + displayYear + '</b></p>' +
+      '</div>';
+    previewDiv.style.display = 'block';
+    return; 
+  }
+
+  if (!reportData.summary) return;
+
+  var totalItems = Number(reportData.summary.totalItems || 0);
+  var totalCompleted = Number(reportData.summary.totalCompleted || 0);
+  var totalProcessing = Number(reportData.summary.totalProcessing || 0);
+  var totalExternal = Number(reportData.summary.totalExternal || 0);
+  var completionRate = totalItems > 0 ? ((totalCompleted / totalItems) * 100).toFixed(1) : '0.0';
+
+  // 🍓 สร้างปุ่มเปิด PDF ถ้ามีลิงก์แนบมา
+  var downloadBtnHtml = '';
+  if (pdfUrl) {
+    downloadBtnHtml = 
+      '<div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px dashed #d1d5db; text-align: center;">' +
+        '<a href="' + pdfUrl + '" target="_blank" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; padding: 0.75rem 2rem; border-radius: 50px; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 6px -1px rgba(139, 92, 246, 0.3); transition: transform 0.2s;">' +
+          '<i class="fas fa-file-pdf"></i> เปิดดูรายงาน PDF อีกครั้ง' +
+        '</a>' +
+      '</div>';
+  }
+
+  previewContent.innerHTML =
+    '<div style="background:#f8fafc;border-radius:12px;padding:1.5rem;border-left:4px solid #10b981;margin-top:1.5rem;">' +
+      '<h4 style="color:#374151;margin:0 0 1.5rem 0; display:flex; align-items:center; gap:0.5rem;">' +
+        '<i class="fas fa-chart-bar" style="color:#10b981;"></i> ' +
+        'สรุปข้อมูล ' + monthName + ' ' + displayYear +
+      '</h4>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1rem;">' +
+        '<div style="text-align:center; padding:1rem; background:white; border-radius:8px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">' +
+          '<div style="font-size:1.75rem;font-weight:bold;color:#374151;line-height:1;">' + totalItems + '</div>' +
+          '<div style="color:#6b7280;font-size:0.85rem;margin-top:0.5rem;">รายการทั้งหมด</div>' +
+        '</div>' +
+        '<div style="text-align:center; padding:1rem; background:white; border-radius:8px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">' +
+          '<div style="font-size:1.75rem;font-weight:bold;color:#10b981;line-height:1;">' + totalCompleted + '</div>' +
+          '<div style="color:#6b7280;font-size:0.85rem;margin-top:0.5rem;">เสร็จสิ้น</div>' +
+        '</div>' +
+        '<div style="text-align:center; padding:1rem; background:white; border-radius:8px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">' +
+          '<div style="font-size:1.75rem;font-weight:bold;color:#3b82f6;line-height:1;">' + totalProcessing + '</div>' +
+          '<div style="color:#6b7280;font-size:0.85rem;margin-top:0.5rem;">กำลังดำเนินการ</div>' +
+        '</div>' +
+         '<div style="text-align:center; padding:1rem; background:white; border-radius:8px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">' +
+          '<div style="font-size:1.75rem;font-weight:bold;color:#0891b2;line-height:1;">' + totalExternal + '</div>' +
+          '<div style="color:#6b7280;font-size:0.85rem;margin-top:0.5rem;">ดำเนินการภายนอก</div>' +
+        '</div>' +
+        '<div style="text-align:center; padding:1rem; background:white; border-radius:8px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">' +
+          '<div style="font-size:1.75rem;font-weight:bold;color:#10b981;line-height:1;">' + completionRate + '%</div>' +
+          '<div style="color:#6b7280;font-size:0.85rem;margin-top:0.5rem;">อัตราสำเร็จ</div>' +
+        '</div>' +
+      '</div>' +
+      downloadBtnHtml + 
+    '</div>';
+
+  previewDiv.style.display = 'block';
+}
+
+// ==========================================
+    // [BERRY-MOD] SYSTEM TEST LOGIC (Robust)
+    // ==========================================
+
+    function runFullSystemTest() {
+        const modal = document.getElementById('selfTestModal');
+        const terminal = document.getElementById('terminalLog');
+        const btn = document.getElementById('btnTestSystem');
+        const btnCopy = document.getElementById('btnCopyTerminal');
+        const btnClose = document.getElementById('btnCloseSelfTest');
+
+        if (!modal || !terminal) {
+            console.error("Modal elements not found!");
+            return;
+        }
+
+        // กันกดซ้ำ
+        if (window.selfTestRunning) return;
+        window.selfTestRunning = true;
+
+        // ย้าย Overlay ไป Top Level เสมอ (แก้ปัญหา z-index)
+        if (modal.parentElement !== document.body) document.body.appendChild(modal);
+
+        // Lock Body Scroll (Mobile Safe)
+        const y = window.scrollY || document.documentElement.scrollTop || 0;
+        document.body.dataset.scrollY = String(y);
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${y}px`;
+        document.body.style.width = '100%';
+
+        // เปิด Modal
+        modal.classList.add('active');
+        modal.setAttribute('aria-hidden', 'false');
+        modal.style.display = 'flex'; // Force display
+
+        // Bind Events (ทำครั้งเดียว)
+        if (modal.dataset.bound !== '1') {
+           // CHANGE: [BERRY-FIX] Event Listeners ที่รัดกุมขึ้น
+            // 1. คลิกพื้นหลังปิด (Overlay Click)
+            modal.addEventListener('click', (e) => {
+                // เช็กว่าคลิกที่ตัว Overlay จริงๆ ไม่ใช่ Dialog เนื้อหาข้างใน
+                if (e.target === modal) {
+                    closeSelfTestModal();
+                }
+            });
+
+            // 2. ESC Key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modal.classList.contains('active')) {
+                    e.preventDefault();
+                    console.log("ESC pressed: Closing modal");
+                    closeSelfTestModal();
+                }
+            });
+
+            modal.dataset.bound = '1';
+        }
+
+        // Focus เข้า Dialog เพื่อ a11y
+        const dialog = modal.querySelector('.dialog');
+        setTimeout(() => { if(dialog) dialog.focus(); }, 100);
+
+        // ===== เริ่มรัน Log =====
+        terminal.innerHTML = `<span style="color:#60a5fa; font-weight:bold;">[${new Date().toLocaleTimeString()}] 🍓 เริ่มต้นการตรวจสอบระบบ Full Lifecycle...</span><br><br>`;
+        
+        if (btn) btn.disabled = true;
+        if (btnCopy) btnCopy.disabled = true; // ล็อกปุ่ม Copy ตอนรัน
+
+        const addLog = (step, isPass, msg) => {
+            const icon = isPass ? "✅ PASS" : "❌ FAIL";
+            const color = isPass ? "#10b981" : "#ef4444";
+            terminal.innerHTML += `<span style="color:${color}; font-weight:500;">${icon} | ${step}: ${msg}</span><br>`;
+            terminal.scrollTop = terminal.scrollHeight; // Auto Scroll ไปล่างสุด
+        };
+
+        try {
+            // 1. Client Check
+            addLog("Client UI", true, "ตรวจสอบความพร้อมหน้าจอแดชบอร์ด");
+
+            // 2. Chart Check
+            const mandatoryStatuses = ["รอดำเนินการ", "กำลังดำเนินการ", "รอเบิกพัสดุ", "เสร็จสิ้น", "ยกเลิก"];
+            if (typeof statusChart !== 'undefined' && statusChart?.data?.labels) {
+                const currentLabels = statusChart.data.labels;
+                const hasAll = mandatoryStatuses.every(s => currentLabels.includes(s));
+                addLog("Chart Mapping", hasAll, hasAll ? "รองรับครบ 5 สถานะหลัก" : "สถานะในกราฟไม่ครบ");
+            } else {
+                addLog("Chart Engine", false, "ไม่พบข้อมูลกราฟ");
+            }
+
+            // 3. Server Check
+            addLog("Server Connection", true, "กำลังส่งคำสั่งไปที่ Google Apps Script...");
+            terminal.innerHTML += `<span style="color:#94a3b8; font-style:italic;">...รอสักครู่นะคะ กำลังคุยกับหลังบ้าน...</span><br>`;
+
+            google.script.run
+                .withSuccessHandler(function(res) {
+                    if (res && res.logs) {
+                        res.logs.forEach(l => {
+                            // แปลง log server เป็น html
+                            const cleanLog = String(l).replace('PASS', '').replace('FAIL', '').trim();
+                            const isPass = String(l).includes("✅");
+                            addLog("Server Result", isPass, cleanLog);
+                        });
+                        terminal.innerHTML += `<br><span style="color:#fbbf24; font-weight:bold;">✨ การทดสอบเสร็จสมบูรณ์ 100% แล้วค่ะ!</span>`;
+                    } else {
+                        addLog("Server Error", false, "ได้ข้อมูลเปล่ากลับมา");
+                    }
+                    finishTest();
+                })
+                .withFailureHandler(function(err) {
+                    addLog("Fatal Error", false, err.message || err);
+                    finishTest();
+                })
+                .selfTest(); // เรียกฟังก์ชัน selfTest() ใน code.gs
+
+        } catch (e) {
+            addLog("Client Error", false, e.message);
+            finishTest();
+        }
+
+        function finishTest() {
+            window.selfTestRunning = false;
+            if (btn) btn.disabled = false;
+            if (btnCopy) btnCopy.disabled = false; // ปลดล็อกปุ่ม Copy
+        }
+    }
+
+   // ==========================================
+    // [BERRY-FIX] FORCE CLOSE MODAL FUNCTION
+    // ==========================================
+    function closeSelfTestModal() {
+        console.log("🍒 Action: Closing SelfTest Modal...");
+        
+        const modal = document.getElementById('selfTestModal');
+        const btn = document.getElementById('btnTestSystem');
+        const btnCopy = document.getElementById('btnCopyTerminal');
+
+        if (!modal) {
+            console.warn("Modal element not found!");
+            return;
+        }
+
+        // 1. FORCE RESET STATE (สำคัญมาก: ปลดล็อกสถานะการรันทันที)
+        window.selfTestRunning = false;
+
+        // 2. UI CLEANUP (ปิด Modal ทันที)
+        modal.classList.remove('active');
+        // รอ Animation จบนิดนึงค่อยซ่อน หรือซ่อนเลยถ้าจำเป็น
+        setTimeout(() => {
+            modal.style.display = 'none'; 
+            modal.setAttribute('aria-hidden', 'true');
+        }, 100); // delay เล็กน้อยเพื่อให้ effect zoomOut ทำงาน (ถ้ามี) หรือ set 0 ถ้าต้องการทันที
+
+        // 3. RESTORE SCROLL (คืนค่า Scroll ให้ Body)
+        try {
+            const y = parseInt(document.body.dataset.scrollY || '0');
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.width = '';
+            document.body.style.overflow = ''; // เผื่อมี overflow hidden ค้าง
+            window.scrollTo(0, y);
+        } catch (e) {
+            console.error("Scroll restore error (non-fatal):", e);
+        }
+
+        // 4. BUTTON RESET (คืนค่าปุ่มต่างๆ)
+        if (btn) btn.disabled = false;
+        if (btnCopy) btnCopy.disabled = false;
+        
+        // 5. CLEAR LOG (Optional: ถ้าต้องการเคลียร์ Log เมื่อปิด)
+        // document.getElementById('terminalLog').innerHTML = '[Ready] รอการเริ่มทดสอบ...';
+        
+        // Return Focus
+        if (btn) btn.focus();
+    }
+
+    function copyTerminalLog() {
+        const terminal = document.getElementById('terminalLog');
+        const btnCopy = document.getElementById('btnCopyTerminal');
+        if (!terminal) return;
+
+        // กันกดซ้ำ
+        if(btnCopy) btnCopy.disabled = true;
+
+        const textToCopy = terminal.innerText.trim();
+        const originalText = btnCopy.innerHTML;
+
+        const success = () => {
+            btnCopy.innerHTML = '<i class="fas fa-check"></i> เรียบร้อย!';
+            if (typeof showAlert === 'function') showAlert('success', 'คัดลอก Log แล้วค่ะ');
+            setTimeout(() => { 
+                btnCopy.innerHTML = originalText; 
+                btnCopy.disabled = false;
+            }, 2000);
+        };
+
+        const fail = (err) => {
+            console.error("Copy failed", err);
+            // Fallback: Textarea Hack
+            try {
+                const ta = document.createElement('textarea');
+                ta.value = textToCopy;
+                ta.style.position = 'fixed'; 
+                ta.style.left = '-9999px';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                success();
+            } catch (e) {
+                btnCopy.innerHTML = '<i class="fas fa-times"></i> ไม่ได้ค่ะ';
+                setTimeout(() => { 
+                    btnCopy.innerHTML = originalText;
+                    btnCopy.disabled = false; 
+                }, 2000);
+            }
+        };
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(textToCopy).then(success).catch(fail);
+        } else {
+            fail("API not supported");
+        }
+    }
+
+
+
+
+        
+       
+    </script>
+    <div id="globalLoadingOverlay" class="gl-overlay" style="display:none;">
+  <div class="gl-card">
+    <div class="gl-spinner"></div>
+    <div>
+      <div class="gl-title" id="glTitle">กำลังประมวลผล</div>
+      <div class="gl-sub" id="glSub">โปรดรอสักครู่</div>
+    </div>
+  </div>
+</div>
+
+
+
+</body>
+</html>
