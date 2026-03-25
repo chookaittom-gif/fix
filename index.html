@@ -1,0 +1,2167 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <script>
+        window.baseUrl = '<?= baseUrl ?>';
+        if (!window.baseUrl || window.baseUrl.includes('baseUrl')) {
+            window.baseUrl = window.location.href.split('?')[0];
+        }
+
+        function goToPage(page, newTab = false) {
+            var url = window.baseUrl + '?page=' + page;
+            if (newTab) {
+                window.open(url, '_blank');
+            } else {
+                window.top.location.href = url;
+            }
+        }
+
+        function logout() {
+            var url = window.baseUrl + '?action=logout';
+            window.top.location.href = url;
+        }
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบแจ้งซ่อมออนไลน์ - มหาวิทยาลัยสวนดุสิต ศูนย์การศึกษาลำปาง</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+     <style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: 'Sarabun', sans-serif;
+        min-height: 100vh;
+        background: linear-gradient(125deg, #7579ff 0%, #b224ef 100%);
+        color: #333;
+    }
+
+    .navbar {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        padding: 1rem 0;
+        box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        position: fixed;
+        width: 100%;
+        top: 0;
+        z-index: 1000;
+    }
+
+    .nav-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.1rem 2rem 0.8rem 2rem;
+        background: transparent;
+    }
+
+    .logo {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .logo img {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        object-fit: cover;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .logo h1 {
+        color: #4f46e5;
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin: 0;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .nav-buttons {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .nav-btn {
+        background: #fff;
+        color: #6c63ff;
+        border: none;
+        padding: 0.7rem 1.6rem;
+        font-size: 1.08rem;
+        border-radius: 42px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 2px 10px rgba(108,99,255,0.07);
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .nav-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(108, 99, 255, 0.3);
+    }
+
+    .nav-btn.active {
+        background: #6c63ff;
+        color: #fff;
+    }
+    .nav-btn.secondary {
+        background: linear-gradient(135deg, #64748b, #475569);
+        color: white;
+    }
+    .nav-btn.danger {
+        background: linear-gradient(135deg, #dc2626, #ef4444);
+        color: white;
+    }
+    .nav-btn.hidden {
+        display: none;
+    }
+    .main-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 120px 2rem 2rem;
+        min-height: 100vh;
+    }
+    .content-wrapper {
+        background: #fff;
+        border-radius: 22px;
+        box-shadow: 0 8px 40px rgba(41, 46, 74, 0.15);
+        padding: 2.5rem;
+        margin-bottom: 2rem;
+    }
+    .form-input, .form-select, .form-textarea {
+        width: 100%; /* [เพิ่ม] ทำให้เต็มความกว้างเสมอ */
+        padding: 1rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        font-size: 1rem;
+        font-family: inherit;
+        transition: all 0.3s ease;
+        background: #f8fafc;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+        outline: none;
+        border-color: #4f46e5;
+        background: white;
+        box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+    }
+    .hero-section {
+        text-align: center;
+        margin-bottom: 4rem;
+    }
+    .hero-title {
+        color: #4f46e5;
+        font-size: 3rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    .hero-subtitle {
+        color: #6b7280;
+        font-size: 1.2rem;
+        font-weight: 300;
+        margin-bottom: 2rem;
+    }
+    .form-container {
+        background: transparent;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 0;
+        margin-bottom: 3rem;
+    }
+    .form-title {
+        text-align: center;
+        color: #4f46e5;
+        font-size: 2rem;
+        font-weight: 600;
+        margin-bottom: 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+    }
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+    .form-group.full-width {
+        grid-column: 1 / -1;
+    }
+    .form-label {
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .required {
+        color: #dc2626;
+    }
+    .form-textarea {
+        resize: vertical;
+        min-height: 120px;
+    }
+    .auto-fields, 
+    .image-upload-section, 
+    .location-section {
+        border: 2px dashed #a7bcfd;
+        background: #f6f9ff;
+        border-radius: 16px;
+        margin-bottom: 1.2rem;
+        padding: 1.5rem 1rem;
+    }
+    .auto-fields h3,
+    .location-section h3,
+    .image-upload-section h3 {
+        color: #0369a1;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1.1rem;
+    }
+    .image-upload-section {
+        border-color: #10b981;
+        background: #f0fdf4;
+    }
+    .image-upload-section h3 {
+        color: #059669;
+    }
+    #otherLocationInput {
+        margin-top: 1rem;
+        display: none;
+    }
+    .image-upload-hint {
+        background: #ecfdf5;
+        color: #047857;
+        padding: 0.75rem;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+        border: 1px solid #a7f3d0;
+    }
+    .image-upload-area {
+        border: 2px dashed #10b981;
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        background: #f0fdf4;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-bottom: 1rem;
+    }
+    .image-upload-area:hover {
+        background: #ecfdf5;
+        border-color: #059669;
+    }
+    .image-upload-area.dragover {
+        background: #d1fae5;
+        border-color: #047857;
+    }
+    .upload-icon {
+        font-size: 3rem;
+        color: #10b981;
+        margin-bottom: 1rem;
+    }
+    .upload-text {
+        color: #059669;
+        font-size: 1.1rem;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+    .upload-hint {
+        color: #6b7280;
+        font-size: 0.9rem;
+    }
+    #imageInput {
+        display: none;
+    }
+    .image-preview-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    .image-preview {
+        position: relative;
+        border-radius: 12px;
+        overflow: hidden;
+        background: white;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+    }
+    .image-preview:hover {
+        transform: translateY(-2px);
+    }
+    .image-preview img {
+        width: 100%;
+        height: 120px;
+        object-fit: cover;
+        display: block;
+    }
+    .image-preview-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    .image-preview:hover .image-preview-overlay {
+        opacity: 1;
+    }
+    .image-remove-btn {
+        background: #ef4444;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 1rem;
+    }
+    .image-remove-btn:hover {
+        background: #dc2626;
+        transform: scale(1.1);
+    }
+    .image-count {
+        color: #059669;
+        font-size: 0.9rem;
+        font-weight: 500;
+        margin-top: 0.5rem;
+    }
+    .submit-btn {
+        background: linear-gradient(135deg, #059669, #10b981);
+        color: white;
+        padding: 1.2rem 3rem;
+        border: none;
+        border-radius: 50px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        margin: 2rem auto 0;
+        min-width: 200px;
+    }
+    .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(5, 150, 105, 0.3);
+    }
+    .submit-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+    .loading {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        margin: 1rem 0;
+        color: #4f46e5;
+        font-weight: 500;
+    }
+    .spinner {
+        width: 20px;
+        height: 20px;
+        border: 2px solid #e5e7eb;
+        border-top: 2px solid #4f46e5;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    .alert {
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        margin: 1rem 0;
+        display: none;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 500;
+    }
+    .alert.success {
+        background: #d1fae5;
+        color: #065f46;
+        border: 1px solid #a7f3d0;
+    }
+    .alert.error {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fca5a5;
+    }
+
+    /* [ANCHOR:CLIENT:INDEX:modal-list-styles] */
+    /* CSS สำหรับ Modal แสดงรายการแจ้งซ่อม */
+    .m-backdrop { 
+        position: fixed;
+        inset: 0; 
+        background: rgba(2, 6, 23, .55); 
+        backdrop-filter: blur(3px); 
+        display: none; 
+        align-items: center; 
+        justify-content: center; 
+        z-index: 2000; 
+        padding: 1rem;
+        animation: fadeIn 0.3s ease; 
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .m-backdrop.show { 
+        display: flex;
+    }
+    .m-card { 
+        background: #fff;
+        border-radius: 16px; 
+        box-shadow: 0 24px 72px rgba(0,0,0,.25); 
+        width: min(1200px, 96vw); 
+        height: min(86vh, 1000px); 
+        display: flex; 
+        flex-direction: column;
+        animation: slideUp 0.3s ease; 
+    }
+    @keyframes slideUp { 
+        from { transform: translateY(20px); opacity: 0; } 
+        to { transform: translateY(0); opacity: 1; } 
+    }
+    .m-head { 
+        display: flex;
+        justify-content: space-between; 
+        gap: .75rem; 
+        align-items: center; 
+        border-bottom: 1px solid #eef2f7; 
+        padding: .9rem 1rem;
+    }
+    .m-head h3 { 
+        margin: 0;
+        font-weight: 600; 
+        color: #1f2937; 
+    }
+    .m-tools { 
+        display: flex;
+        gap: .5rem; 
+        align-items: center; 
+    }
+    .m-tools input[type="search"] { 
+        min-width: 260px;
+        padding: .55rem .75rem; 
+        border: 1px solid #e5e7eb; 
+        border-radius: 10px; 
+        font-family: 'Sarabun', sans-serif;
+    }
+    .btn-icon { 
+        background: #f3f4f6;
+        border: 0; 
+        border-radius: 10px; 
+        padding: .45rem .6rem; 
+        cursor: pointer; 
+        font-size: 1rem;
+    }
+    .btn-icon:hover { 
+        background: #e5e7eb;
+    }
+    .m-body { 
+        flex: 1;
+        min-height: 0; 
+        overflow-y: auto; 
+    }
+    .rep-table { 
+        width: 100%;
+        border-collapse: collapse; 
+        padding: 0 1rem; 
+    }
+   .rep-table thead th { 
+        text-align: left;
+        font-weight: 600; 
+        color: #334155; 
+        font-size: .9rem; 
+        padding: 1rem .75rem; 
+        position: sticky; 
+        top: 0; 
+        background: #f1f5f9;
+        border-bottom: 2px solid #cbd5e1;
+        border-right: 1px solid #e2e8f0;
+    }
+   .rep-table tbody td { 
+        border-bottom: 1px solid #eef2f7;
+        padding: .75rem; 
+        font-size: 0.9rem; 
+        color: #475569; 
+        border-right: 1px solid #eef2f7;
+        transition: background-color 0.2s ease;
+    }
+    .rep-table tbody tr:hover td { 
+        background-color: #eef2ff;
+        color: #4f46e5;
+    }
+
+    .rep-table thead th:last-child,
+    .rep-table tbody td:last-child {
+        border-right: none;
+    }
+
+    .rep-table tbody tr:nth-child(even) td {
+        background-color: #f8fafc;
+    }
+
+    .rep-table .empty { 
+        text-align: center;
+        color: #64748b; 
+        padding: 2rem; 
+    }
+    .m-foot { 
+        border-top: 1px solid #eef2f7;
+        padding: .6rem 1rem; 
+        display: flex; 
+        justify-content: flex-end; 
+        align-items: center; 
+    }
+    .pager { 
+        display: flex;
+        gap: .5rem; 
+        align-items: center; 
+    }
+    .pager .btn { 
+        padding: .35rem .7rem;
+        border-radius: 10px; 
+        border: 1px solid #e5e7eb; 
+        background: #fff; 
+        cursor: pointer;
+    }
+    .pager .btn:disabled { 
+        opacity: .5;
+        pointer-events: none; 
+    }
+    .pager select { 
+        border-radius: 10px;
+        border: 1px solid #e5e7eb; 
+        padding: .3rem .5rem; 
+    }
+    /* CSS for Skeleton Loading */
+    @keyframes skeleton-glow {
+      from { background-color: #f3f4f6; }
+      to { background-color: #e5e7eb; }
+    }
+    .skeleton-row td {
+      padding-top: 1.2rem;
+      padding-bottom: 1.2rem;
+    }
+    .skeleton-row td div {
+      background-color: #f3f4f6;
+      height: 1rem;
+      border-radius: 999px;
+      animation: skeleton-glow 1.5s infinite alternate;
+      opacity: 0.8;
+    }
+
+    /* [ANCHOR: CLIENT: INDEX: REPLACE_FULL_BLOCK] */
+
+body {
+    overflow-x: hidden;
+}
+
+/* --- Base styles: Report Modal / Table / Badge / Loading --- */
+.rep-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    overflow: hidden;
+    border-radius: 14px;
+    box-shadow: 0 10px 28px rgba(2, 6, 23, 0.08);
+    background: #fff;
+}
+
+.rep-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: linear-gradient(180deg, #f8fafc, #f1f5f9);
+    color: #0f172a;
+    font-weight: 700;
+    font-size: 0.92rem;
+    text-align: left;
+    padding: 14px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    white-space: nowrap;
+}
+
+.rep-table tbody td {
+    padding: 12px 12px;
+    border-bottom: 1px solid #eef2f7;
+    vertical-align: top;
+    color: #0f172a;
+    font-size: 0.92rem;
+    word-break: break-word;
+}
+
+.rep-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.rep-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.rep-col-seq {
+    font-weight: 700;
+    color: #0b3b8a;
+}
+
+.rep-meta {
+    color: #475569;
+    font-size: 0.86rem;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.82rem;
+    line-height: 1;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+.badge i {
+    font-size: 0.88rem;
+}
+
+.badge-status-pending {
+    background: #fff7ed;
+    color: #9a3412;
+    border-color: #fed7aa;
+}
+
+.badge-status-processing {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+}
+
+.badge-status-completed {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: #a7f3d0;
+}
+
+.badge-status-cancelled {
+    background: #fef2f2;
+    color: #b91c1c;
+    border-color: #fecaca;
+}
+
+.badge-status-parts {
+    background: #f5f3ff;
+    color: #6d28d9;
+    border-color: #ddd6fe;
+}
+
+
+.badge-status-external {
+    background: #ecfeff;
+    color: #0891b2;
+    border-color: #a5f3fc;
+}
+
+.badge-prio-low {
+    background: #f1f5f9;
+    color: #334155;
+    border-color: #e2e8f0;
+}
+
+.badge-prio-medium {
+    background: #ecfeff;
+    color: #0e7490;
+    border-color: #a5f3fc;
+}
+
+.badge-prio-urgent {
+    background: #fff7ed;
+    color: #9a3412;
+    border-color: #fed7aa;
+}
+
+.badge-prio-critical {
+    background: #fef2f2;
+    color: #b91c1c;
+    border-color: #fecaca;
+}
+
+.m-head h3 i {
+    margin-right: 8px;
+    color: #2563eb;
+}
+
+.gl-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.gl-card {
+    width: min(420px, 92vw);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.9));
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 18px;
+    box-shadow: 0 30px 90px rgba(0, 0, 0, 0.22);
+    padding: 18px;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+}
+
+.gl-spinner {
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    border: 4px solid rgba(59, 130, 246, 0.18);
+    border-top-color: rgba(59, 130, 246, 0.95);
+    animation: glSpin 0.85s linear infinite;
+    flex: 0 0 auto;
+}
+
+@keyframes glSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.gl-title {
+    font-weight: 700;
+    font-size: 1.02rem;
+    color: #0f172a;
+    font-family: 'Sarabun', sans-serif;
+}
+
+.gl-sub {
+    font-size: 0.9rem;
+    color: #475569;
+    margin-top: 4px;
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* --- Tablet --- */
+@media (max-width: 992px) {
+    .content-wrapper {
+        padding: 2rem;
+    }
+
+    .form-row {
+        gap: 1rem;
+    }
+
+    .nav-buttons {
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+}
+
+/* --- Mobile / Tablet --- */
+@media (max-width: 768px) {
+    .main-container {
+        padding: 85px 1rem 1.25rem;
+    }
+
+    .content-wrapper {
+        padding: 1.5rem 1rem;
+        border-radius: 16px;
+    }
+
+    .nav-container {
+        padding: 0.5rem 1rem;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .logo {
+        width: 100%;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .logo h1 {
+        font-size: 1.2rem;
+        line-height: 1.3;
+    }
+
+    .nav-buttons {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .nav-btn {
+        padding: 0.5rem 0.9rem;
+        font-size: 0.9rem;
+        min-width: 110px;
+        justify-content: center;
+    }
+
+    .hero-title {
+        font-size: 2rem;
+        line-height: 1.3;
+        word-break: break-word;
+    }
+
+    .hero-subtitle {
+        font-size: 1rem;
+        line-height: 1.5;
+    }
+
+    .form-title {
+        font-size: 1.5rem;
+        line-height: 1.3;
+        text-align: center;
+        flex-wrap: wrap;
+    }
+
+    .form-row {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .form-group,
+    .form-group.full-width {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+        width: 100%;
+        min-width: 0;
+        padding: 0.9rem;
+        font-size: 0.95rem;
+    }
+
+    .auto-fields,
+    .image-upload-section,
+    .location-section {
+        padding: 1.25rem 1rem;
+    }
+
+    .image-upload-area {
+        padding: 1.5rem 0.75rem;
+    }
+
+    .image-preview-container {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.75rem;
+    }
+
+    .image-preview img {
+        height: 96px;
+    }
+
+    .submit-btn {
+        width: 100%;
+        min-width: 0;
+        padding: 1rem;
+        font-size: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .m-card {
+        width: 100%;
+        height: 90vh;
+        border-radius: 14px;
+    }
+
+    .m-head {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+
+    .m-tools {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .m-tools input[type="search"] {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .rep-table thead {
+        display: none;
+    }
+
+    .rep-table,
+    .rep-table tbody,
+    .rep-table tr,
+    .rep-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .rep-table tr {
+        margin-bottom: 1rem;
+        border: 1px solid #eef2f7;
+        border-radius: 8px;
+        padding: 0.5rem;
+        background: #fff;
+    }
+
+    .rep-table td {
+        padding: 0.5rem 0.5rem 0.5rem 42%;
+        position: relative;
+        text-align: right;
+        border: none;
+        border-bottom: 1px dashed #eef2f7;
+        min-height: 38px;
+        word-break: break-word;
+    }
+
+    .rep-table td:last-child {
+        border-bottom: none;
+    }
+
+    .rep-table td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 0.5rem;
+        top: 0.5rem;
+        width: 34%;
+        font-weight: 600;
+        color: #334155;
+        text-align: left;
+        white-space: normal;
+        line-height: 1.3;
+    }
+
+    #repTbody td:nth-of-type(1)::before { content: "เลขที่:"; }
+    #repTbody td:nth-of-type(2)::before { content: "วันที่:"; }
+    #repTbody td:nth-of-type(3)::before { content: "ผู้แจ้ง:"; }
+    #repTbody td:nth-of-type(4)::before { content: "สถานที่:"; }
+    #repTbody td:nth-of-type(5)::before { content: "ประเภท:"; }
+    #repTbody td:nth-of-type(6)::before { content: "สถานะ:"; }
+    #repTbody td:nth-of-type(7)::before { content: "ความเร่งด่วน:"; }
+
+    .pager {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .gl-overlay {
+        backdrop-filter: none;
+    }
+
+    .gl-card {
+        width: min(360px, 92vw);
+        padding: 16px;
+        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.16);
+    }
+}
+
+/* --- Small Mobile / 320px --- */
+@media (max-width: 480px) {
+    .main-container {
+        padding: 75px 0.5rem 1rem;
+    }
+
+    .content-wrapper {
+        padding: 1.25rem 0.75rem;
+    }
+
+    .logo h1 {
+        font-size: 1rem;
+    }
+
+    .nav-buttons {
+        gap: 0.35rem;
+    }
+
+    .nav-btn {
+        padding: 0.45rem 0.7rem;
+        font-size: 0.82rem;
+        min-width: 100px;
+        border-radius: 20px;
+    }
+
+    .hero-title {
+        font-size: 1.5rem;
+    }
+
+    .hero-subtitle {
+        font-size: 0.95rem;
+    }
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+        padding: 0.85rem;
+        font-size: 0.95rem;
+    }
+
+    .auto-fields,
+    .image-upload-section,
+    .location-section {
+        padding: 1rem 0.75rem;
+    }
+
+    .image-upload-area {
+        padding: 1.25rem 0.5rem;
+    }
+
+    .upload-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .upload-text {
+        font-size: 1rem;
+    }
+
+    .upload-hint {
+        font-size: 0.8rem;
+        line-height: 1.4;
+    }
+
+    .image-preview img {
+        height: 90px;
+    }
+
+    .rep-table td {
+        padding-left: 44%;
+        font-size: 0.88rem;
+    }
+
+    .rep-table td::before {
+        width: 36%;
+        font-size: 0.82rem;
+    }
+}
+
+ </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <img src="https://img2.pic.in.th/pic/SDULP-FIX52933b8334b3dd59.png" alt="โลโก้ ระบบแจ้งซ่อมออนไลน์">
+                <h1>ระบบแจ้งซ่อมออนไลน์</h1>
+            </div>
+            <div class="nav-buttons">
+                <button class="nav-btn" onclick="openReportsModal()">
+                    <i class="fas fa-list-alt"></i>
+                    รายการแจ้งซ่อม
+                </button>
+                <a href="javascript:void(0)" onclick="goToPage('dashboard')" class="nav-btn secondary">
+                    <i class="fas fa-tachometer-alt"></i>
+                    แดชบอร์ด
+                </a>
+                
+                <!-- เมนูระบบสต็อกอะไหล่ -->
+                <a href="javascript:void(0)" onclick="goToPage('stock')" class="nav-btn secondary" id="navStockBtnMain" style="display: none; background: linear-gradient(135deg, #64748b, #475569); color: white;">
+                    <i class="fas fa-boxes"></i>
+                    ระบบสต็อกอะไหล่
+                </a>
+
+                <a href="javascript:void(0)" onclick="goToPage('login')" class="nav-btn" id="loginBtn">
+                    <i class="fas fa-sign-in-alt"></i>
+                    เข้าสู่ระบบ
+                </a>
+                <a href="javascript:void(0)" onclick="logout()" class="nav-btn danger hidden" id="logoutBtn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    ออกจากระบบ
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <div class="content-wrapper">
+            <div class="hero-section">
+                <h1 class="hero-title">
+                    <i class="fas fa-wrench"></i>
+                    ระบบแจ้งซ่อมออนไลน์
+                </h1>
+                <p class="hero-subtitle">มหาวิทยาลัยสวนดุสิต ศูนย์การศึกษาลำปาง</p>
+                <p style="color: #6b7280; font-size: 1rem; margin-top: 0.5rem;">
+                    แจ้งซ่อมอุปกรณ์และสิ่งอำนวยความสะดวกได้อย่างรวดเร็ว ติดตามสถานะได้ตลอดเวลา
+                </p>
+            </div>
+
+            <div id="alertSuccess" class="alert success">
+                <i class="fas fa-check-circle"></i>
+                <span id="successMessage"></span>
+            </div>
+
+            <div id="alertError" class="alert error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span id="errorMessage"></span>
+            </div>
+
+            <div class="form-container">
+                <h2 class="form-title">
+                    <i class="fas fa-clipboard-list"></i>
+                    แจ้งซ่อมอุปกรณ์
+                </h2>
+
+                <div class="auto-fields">
+                    <h3>
+                        <i class="fas fa-robot"></i>
+                        ข้อมูลที่ระบบสร้างให้อัตโนมัติ
+                    </h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-hashtag"></i>
+                                เลขที่
+                            </label>
+                            <input type="text" id="sequenceNumber" class="form-input" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-calendar"></i>
+                                วันที่
+                            </label>
+                            <input type="text" id="currentDate" class="form-input" readonly>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="repairForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="requesterName" class="form-label">
+                                <i class="fas fa-user"></i>
+                                ชื่อผู้แจ้งซ่อม <span class="required">*</span>
+                            </label>
+                            <input type="text" id="requesterName" name="requesterName" class="form-input" required placeholder="กรอกชื่อ-นามสกุล">
+                        </div>
+                        <div class="form-group">
+                            <label for="phoneNumber" class="form-label">
+                                <i class="fas fa-phone"></i>
+                                เบอร์โทรศัพท์
+                            </label>
+                            <input type="tel" id="phoneNumber" name="phoneNumber" class="form-input" placeholder="กรอกเบอร์โทรศัพท์">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="repairType" class="form-label">
+                                <i class="fas fa-tag"></i>
+                                ประเภทงานซ่อม
+                            </label>
+                            <select id="repairType" name="repairType" class="form-select">
+                                <option value="ทั่วไป">ทั่วไป</option>
+                                <option value="ไฟฟ้า">ไฟฟ้า</option>
+                                <option value="ประปา">ประปา</option>
+                                <option value="แอร์">แอร์</option>
+                                <option value="คอมพิวเตอร์">คอมพิวเตอร์</option>
+                                <option value="เครื่องใช้ไฟฟ้า">เครื่องใช้ไฟฟ้า</option>
+                                <option value="อื่นๆ">อื่นๆ</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="priority" class="form-label">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                ความเร่งด่วน
+                            </label>
+                            <select id="priority" name="priority" class="form-select">
+                                <option value="ปานกลาง">ปานกลาง</option>
+                                <option value="เร่งด่วน">เร่งด่วน</option>
+                                <option value="ฉุกเฉิน">ฉุกเฉิน</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="repairItem" class="form-label">
+                            <i class="fas fa-cog"></i>
+                            รายการแจ้งซ่อม <span class="required">*</span>
+                        </label>
+                        <input type="text" id="repairItem" name="repairItem" class="form-input" required placeholder="ระบุอุปกรณ์หรือสิ่งที่ต้องการซ่อม">
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="issueDescription" class="form-label">
+                            <i class="fas fa-clipboard-check"></i>
+                            อาการ/รายละเอียดปัญหา <span class="required">*</span>
+                        </label>
+                        <textarea id="issueDescription" name="issueDescription" class="form-textarea" required placeholder="อธิบายอาการหรือปัญหาที่พบโดยละเอียด"></textarea>
+                    </div>
+
+                    <div class="image-upload-section">
+                        <h3>
+                            <i class="fas fa-images"></i>
+                            แนบรูปภาพประกอบ (ไม่บังคับ)
+                        </h3>
+                        
+                        <div class="image-upload-hint">
+                            <i class="fas fa-info-circle"></i>
+                            สามารถแนบรูปภาพได้สูงสุด 3 รูป เพื่อช่วยให้ช่างเข้าใจปัญหาได้ดีขึ้น (ไฟล์ภาพ: JPG, PNG, GIF ขนาดไม่เกิน 5MB/รูป)
+                        </div>
+
+                        <div class="image-upload-area" onclick="document.getElementById('imageInput').click()">
+                            <div class="upload-icon">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                            </div>
+                            <div class="upload-text">คลิกเพื่อเลือกรูปภาพ</div>
+                            <div class="upload-hint">หรือลากรูปภาพมาวางที่นี่ (สูงสุด 3 รูป)</div>
+                        </div>
+
+                        <input type="file" id="imageInput" multiple accept="image/*">
+                        
+                        <div id="imagePreviewContainer" class="image-preview-container">
+                            </div>
+                        
+                        <div id="imageCount" class="image-count">
+                            รูปภาพที่เลือก: 0/3
+                        </div>
+                    </div>
+
+                    <div class="location-section">
+                        <h3>
+                            <i class="fas fa-map-marker-alt"></i>
+                            สถานที่/ห้อง (ที่ต้องการให้ซ่อม) <span class="required">*</span>
+                        </h3>
+                        
+                        <div class="form-group">
+                            <label for="locationSelect" class="form-label">กรุณาเลือกสถานที่/ห้อง</label>
+                            <select id="locationSelect" name="locationSelect" class="form-select" required>
+                                <option value="">-- เลือกสถานที่ --</option>
+                                <option value="อาคารศูนย์เสริมประสบการณ์การเรียนรู้นอกห้องเรียนสำหรับเด็กปฐมวัย">อาคารศูนย์เสริมประสบการณ์การเรียนรู้นอกห้องเรียนสำหรับเด็กปฐมวัย</option>
+                                <option value="อาคารปฏิบัติการอาหารนานาชาติและเบเกอรี่ (ครัวสวนดุสิต)">อาคารปฏิบัติการอาหารนานาชาติและเบเกอรี่ (ครัวสวนดุสิต)</option>
+                                <option value="อาคารปฏิบัติการโรงเรียนสาธิตละอออุทิศ ส่วนการศึกษาปฐมวัย">อาคารปฏิบัติการโรงเรียนสาธิตละอออุทิศ ส่วนการศึกษาปฐมวัย</option>
+                                <option value="อาคารปฏิบัติการโรงเรียนสาธิตละอออุทิศ ส่วนประถมศึกษา">อาคารปฏิบัติการโรงเรียนสาธิตละอออุทิศ ส่วนประถมศึกษา</option>
+                                <option value="อาคาร SDU Library (ร้านกาแฟดุสิตา)">อาคาร SDU Library (ร้านกาแฟดุสิตา)</option>
+                                <option value="อาคารเรือนรับรอง 1 (Ingredient Library)">อาคารเรือนรับรอง 1 (Ingredient Library)</option>
+                                <option value="อาคารเรือนรับรอง 2">อาคารเรือนรับรอง 2</option>
+                                <option value="อาคารปฏิบัติการบริการการบิน">อาคารปฏิบัติการบริการการบิน</option>
+                                <option value="อาคารหอพักนักศึกษา">อาคารหอพักนักศึกษา</option>
+                                <option value="อาคารกีฬาและนันทนาการ (โรงยิม)">อาคารกีฬาและนันทนาการ (โรงยิม)</option>
+                                <option value="อาคารศูนย์สุขภาพเพื่อส่งเสริมสมรรถนะทางกายฯ (สระว่ายน้ำ)">อาคารศูนย์สุขภาพเพื่อส่งเสริมสมรรถนะทางกายฯ (สระว่ายน้ำ)</option>
+                                <option value="ศาลาแปดเหลี่ยม">ศาลาแปดเหลี่ยม</option>
+                                <option value="อาคารฝึกปฏิบัติการศูนย์พัฒนาเด็กก่อนวัยเรียน (เด็กเล็ก บ้านหนูน้อย)">อาคารฝึกปฏิบัติการศูนย์พัฒนาเด็กก่อนวัยเรียน (เด็กเล็ก บ้านหนูน้อย)</option>
+                                <option value="อื่นๆ">อื่นๆ</option>
+                            </select>
+                        </div>
+
+                        <div id="otherLocationInput" class="form-group">
+                            <label for="otherLocation" class="form-label">
+                                <i class="fas fa-edit"></i>
+                                ระบุสถานที่อื่นๆ <span class="required">*</span>
+                            </label>
+                            <input type="text" id="otherLocation" name="otherLocation" class="form-input" placeholder="กรุณาระบุสถานที่ที่ต้องการให้ซ่อม">
+                        </div>
+
+                        <div class="form-group" style="margin-top: 1rem;">
+                            <label for="locationDetail" class="form-label">
+                                <i class="fas fa-info-circle"></i>
+                                รายละเอียดสถานที่เพิ่มเติม
+                            </label>
+                            <input type="text" id="locationDetail" name="locationDetail" class="form-input" placeholder="เช่น ห้อง ชั้น หมายเลขห้อง หรือจุดเฉพาะ (ไม่บังคับ)">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="submit-btn" id="submitBtn">
+                        <i class="fas fa-paper-plane"></i>
+                        ส่งแจ้งซ่อม
+                    </button>
+                </form>
+
+                <div class="loading" id="loadingIndicator">
+                    <div class="spinner"></div>
+                    <span>กำลังส่งข้อมูล...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="reportsModal" class="m-backdrop" aria-hidden="true">
+        <div class="m-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+            <div class="m-head">
+                <h3 id="modalTitle"><i class="fas fa-list-alt"></i> รายการแจ้งซ่อมทั้งหมด</h3>
+                <div class="m-tools">
+                    <input id="repSearch" type="search" placeholder="ค้นหา… (เลขที่, ผู้แจ้ง, สถานที่, สถานะ)">
+                    <button class="btn-icon" onclick="closeReportsModal()" aria-label="ปิด">✕</button>
+                </div>
+            </div>
+            <div class="m-body">
+                <table class="rep-table">
+                    <thead>
+                        <tr>
+                            <th>เลขที่</th><th>วันที่</th><th>ผู้แจ้ง</th>
+                            <th>สถานที่</th><th>ประเภท</th><th>สถานะ</th><th>ความเร่งด่วน</th>
+                        </tr>
+                    </thead>
+                    <tbody id="repTbody">
+                        <tr><td colspan="7" class="empty">กำลังโหลด…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="m-foot">
+                <div class="pager">
+                    <button id="pgPrev" class="btn" disabled>ก่อนหน้า</button>
+                    <span id="pgInfo">หน้า 1 / 1</span>
+                    <button id="pgNext" class="btn" disabled>ถัดไป</button>
+                    <select id="pgSize" aria-label="จำนวนรายการต่อหน้า">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); padding: 2rem 0; margin-top: 4rem; border-top: 1px solid rgba(255, 255, 255, 0.2);">
+        <div style="max-width: 1200px; margin: 0 auto; text-align: center; color: #6b7280;">
+            <p style="margin: 0; font-size: 0.9rem;">
+                © 2026 ระบบแจ้งซ่อมออนไลน์ มหาวิทยาลัยสวนดุสิต ศูนย์การศึกษาลำปาง|พัฒนาโดย ชูเกียรติ กุศลสถิตย์
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        let selectedImages = [];
+        let userSession = null;
+        const MAX_IMAGES = 3;
+        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM Content Loaded - System starting...');
+            initializeSystem();
+        });
+
+        function initializeSystem() {
+            console.log('Initializing repair system...');
+            try {
+                setCurrentDate();
+                generateTemporarySequenceNumber();
+                initializeImageUpload();
+                initializeEventListeners();
+                checkLoginStatus();
+                console.log('System initialized successfully');
+            } catch (error) {
+                console.error('Error initializing system:', error);
+                showAlert('error', 'เกิดข้อผิดพลาดในการเริ่มต้นระบบ: ' + error.message);
+            }
+        }
+
+        function initializeEventListeners() {
+            const imageInput = document.getElementById('imageInput');
+            const uploadArea = document.querySelector('.image-upload-area');
+            const locationSelect = document.getElementById('locationSelect');
+            const form = document.getElementById('repairForm');
+
+            if (imageInput) imageInput.addEventListener('change', handleImageSelect);
+            if (uploadArea) {
+                uploadArea.addEventListener('dragover', handleDragOver);
+                uploadArea.addEventListener('drop', handleDrop);
+                uploadArea.addEventListener('dragenter', handleDragEnter);
+                uploadArea.addEventListener('dragleave', handleDragLeave);
+            }
+            if (locationSelect) locationSelect.addEventListener('change', handleLocationChange);
+            if (form) form.addEventListener('submit', handleFormSubmit);
+            console.log('Event listeners initialized');
+        }
+
+        function checkLoginStatus() {
+            try {
+                const loginBtn = document.getElementById('loginBtn');
+                const logoutBtn = document.getElementById('logoutBtn');
+                const userInfoString = localStorage.getItem('userInfo');
+
+                if (loginBtn && logoutBtn) {
+                    if (userInfoString) {
+                        const user = JSON.parse(userInfoString);
+                        if (user && user.username) {
+                            userSession = user;
+                            loginBtn.classList.add('hidden');
+                            logoutBtn.classList.remove('hidden');
+                            console.log('User is logged in:', user.username);
+                            return;
+                        }
+                    }
+                    loginBtn.classList.remove('hidden');
+                    logoutBtn.classList.add('hidden');
+                }
+            } catch (error) {
+                console.error('Error checking login status:', error);
+                localStorage.removeItem('userInfo');
+                const loginBtn = document.getElementById('loginBtn');
+                const logoutBtn = document.getElementById('logoutBtn');
+                if (loginBtn && logoutBtn) {
+                    loginBtn.classList.remove('hidden');
+                    logoutBtn.classList.add('hidden');
+                }
+            }
+        }
+
+         function setCurrentDate() {
+            const dateInput = document.getElementById('currentDate');
+            if (dateInput) {
+                const now = new Date();
+                const day = String(now.getDate()).padStart(2, '0');
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const year = now.getFullYear() + 543; // [แก้ไข] บวก 543 เพื่อให้เป็นปี พ.ศ.
+                dateInput.value = `${day}/${month}/${year}`;
+            } else {
+                console.error('Date input field not found');
+            }
+        }
+
+     
+     function generateTemporarySequenceNumber() {
+            const sequenceInput = document.getElementById('sequenceNumber');
+            if (sequenceInput) {
+                const now = new Date();
+                const year = now.getFullYear() + 543; // [แก้ไข] บวก 543 เพื่อให้ตรงกับเลขที่จริงจากฝั่งเซิร์ฟเวอร์
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const tempSequence = `SDUL-${year}${month}${day}-xxx`;
+                sequenceInput.value = tempSequence;
+                sequenceInput.title = 'เลขที่จริงจะถูกสร้างอัตโนมัติเมื่อส่งฟอร์ม';
+            } else {
+                console.error('Sequence number input field not found');
+            }
+        }
+
+        function initializeImageUpload() {
+            selectedImages = [];
+            updateImageCount();
+        }
+
+        function handleImageSelect(event) {
+            event.preventDefault();
+            const files = Array.from(event.target.files);
+            processSelectedFiles(files);
+            event.target.value = '';
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'copy';
+        }
+
+        function handleDragEnter(event) {
+            event.preventDefault();
+            event.currentTarget.classList.add('dragover');
+        }
+
+        function handleDragLeave(event) {
+            event.preventDefault();
+            if (!event.currentTarget.contains(event.relatedTarget)) {
+                event.currentTarget.classList.remove('dragover');
+            }
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('dragover');
+            const files = Array.from(event.dataTransfer.files);
+            processSelectedFiles(files);
+        }
+
+        function processSelectedFiles(files) {
+            const imageFiles = files.filter(file => file.type.startsWith('image/'));
+            if (imageFiles.length === 0) {
+                showAlert('error', 'กรุณาเลือกไฟล์รูปภาพเท่านั้น');
+                return;
+            }
+
+            const availableSlots = MAX_IMAGES - selectedImages.length;
+            if (availableSlots <= 0) {
+                showAlert('error', `สามารถแนบรูปภาพได้สูงสุด ${MAX_IMAGES} รูปเท่านั้น`);
+                return;
+            }
+
+            const filesToProcess = imageFiles.slice(0, availableSlots);
+            filesToProcess.forEach(file => {
+                if (file.size > MAX_FILE_SIZE) {
+                    showAlert('error', `ไฟล์ ${file.name} มีขนาดใหญ่เกิน 5MB`);
+                    return;
+                }
+                addImageToPreview(file);
+            });
+            if (imageFiles.length > availableSlots) {
+                showAlert('info', `เลือกรูปภาพได้อีก ${availableSlots} รูปเท่านั้น (ระบบได้เพิ่มรูปภาพ ${filesToProcess.length} รูปแรกให้แล้ว)`);
+            }
+        }
+
+        const MOBILE_MAX_IMAGE_WIDTH = 1280;
+const MOBILE_IMAGE_QUALITY = 0.82;
+
+function isMobileDevice() {
+  return window.matchMedia('(max-width: 768px)').matches;
+}
+
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      resolve(e.target.result);
+    };
+    reader.onerror = function(err) {
+      reject(err || new Error('ไม่สามารถอ่านไฟล์รูปภาพได้'));
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadImageElement(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = function() {
+      resolve(img);
+    };
+    img.onerror = function() {
+      reject(new Error('ไม่สามารถโหลดรูปภาพเพื่อย่อขนาดได้'));
+    };
+    img.src = dataUrl;
+  });
+}
+
+async function compressImageFile(file) {
+  const rawDataUrl = await readFileAsDataURL(file);
+  const img = await loadImageElement(rawDataUrl);
+
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d', { alpha: false });
+
+  let width = img.width;
+  let height = img.height;
+
+  const maxWidth = isMobileDevice() ? MOBILE_MAX_IMAGE_WIDTH : 1600;
+
+  if (width > maxWidth) {
+    height = Math.round((height * maxWidth) / width);
+    width = maxWidth;
+  }
+
+  canvas.width = width;
+  canvas.height = height;
+
+  ctx.drawImage(img, 0, 0, width, height);
+
+  const outputType = 'image/jpeg';
+  const compressedDataUrl = canvas.toDataURL(outputType, MOBILE_IMAGE_QUALITY);
+
+  return {
+    id: Date.now() + Math.random(),
+    file: file,
+    dataURL: compressedDataUrl,
+    originalName: file.name,
+    originalSize: file.size,
+    compressedSize: Math.round((compressedDataUrl.length * 3) / 4),
+    width: width,
+    height: height
+  };
+}
+
+       async function addImageToPreview(file) {
+  try {
+    console.log('[STEP1] addImageToPreview start:', file ? file.name : 'no-file');
+
+    const imageData = await compressImageFile(file);
+
+    selectedImages.push(imageData);
+    renderImagePreview();
+    updateImageCount();
+
+    console.log('[PASS] addImageToPreview compressed:', {
+      name: imageData.originalName,
+      width: imageData.width,
+      height: imageData.height,
+      originalSize: imageData.originalSize,
+      compressedSize: imageData.compressedSize
+    });
+  } catch (error) {
+    console.error('[FAIL] addImageToPreview:', error);
+    showAlert('error', 'ไม่สามารถเตรียมรูปภาพได้: ' + (error.message || error));
+  }
+}
+
+function renderImagePreview() {
+  const container = document.getElementById('imagePreviewContainer');
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  selectedImages.forEach((imageData, index) => {
+    const previewDiv = document.createElement('div');
+    previewDiv.className = 'image-preview';
+
+    previewDiv.innerHTML = `
+      <img src="${imageData.dataURL}" alt="Preview ${index + 1}" loading="lazy" decoding="async">
+      <div class="image-preview-overlay">
+        <button type="button" class="image-remove-btn" onclick="removeImage(${imageData.id})" title="ลบรูปภาพ">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    `;
+
+    container.appendChild(previewDiv);
+  });
+}
+       
+        function removeImage(imageId) {
+            selectedImages = selectedImages.filter(img => img.id !== imageId);
+            renderImagePreview();
+            updateImageCount();
+        }
+
+        function updateImageCount() {
+            const countElement = document.getElementById('imageCount');
+            if (countElement) {
+                countElement.textContent = `รูปภาพที่เลือก: ${selectedImages.length}/${MAX_IMAGES}`;
+            }
+        }
+
+        function handleLocationChange() {
+            const locationSelect = document.getElementById('locationSelect');
+            const otherLocationInput = document.getElementById('otherLocationInput');
+            const otherLocation = document.getElementById('otherLocation');
+            if (locationSelect.value === 'อื่นๆ') {
+                otherLocationInput.style.display = 'block';
+                otherLocation.required = true;
+            } else {
+                otherLocationInput.style.display = 'none';
+                otherLocation.required = false;
+                otherLocation.value = '';
+            }
+        }
+
+       async function handleFormSubmit(event) {
+  event.preventDefault();
+  console.log('[STEP1] handleFormSubmit start');
+
+  const submitBtn = document.getElementById('submitBtn');
+  const locationSelect = document.getElementById('locationSelect');
+  const otherLocation = document.getElementById('otherLocation');
+  const locationDetail = document.getElementById('locationDetail');
+
+  let finalLocation = '';
+
+  if (locationSelect.value === 'อื่นๆ') {
+    if (!otherLocation.value.trim()) {
+      showAlert('error', 'กรุณาระบุสถานที่อื่นๆ');
+      return;
+    }
+    finalLocation = otherLocation.value.trim();
+  } else if (locationSelect.value) {
+    finalLocation = locationSelect.value;
+  } else {
+    showAlert('error', 'กรุณาเลือกสถานที่');
+    return;
+  }
+
+  if (locationDetail.value.trim()) {
+    finalLocation += ' (' + locationDetail.value.trim() + ')';
+  }
+
+  const formData = {
+    requesterName: document.getElementById('requesterName').value.trim(),
+    phoneNumber: document.getElementById('phoneNumber').value.trim(),
+    repairType: document.getElementById('repairType').value,
+    priority: document.getElementById('priority').value,
+    repairItem: document.getElementById('repairItem').value.trim(),
+    description: document.getElementById('description').value.trim(),
+    location: finalLocation
+  };
+
+  if (!formData.requesterName || !formData.repairItem || !formData.description || !formData.location) {
+    showAlert('error', 'กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน');
+    return;
+  }
+
+  toggleLoading(true);
+  if (submitBtn) submitBtn.disabled = true;
+
+  try {
+    console.log('[STEP2] preparing images:', selectedImages.length);
+
+    const base64Images = selectedImages.map(img => img.dataURL);
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        console.log('[STEP3] submitRepairForm success:', result);
+
+        toggleLoading(false);
+        if (submitBtn) submitBtn.disabled = false;
+
+        if (!result || !result.success) {
+          showAlert('error', (result && result.error) ? result.error : 'บันทึกข้อมูลไม่สำเร็จ');
+          return;
+        }
+
+        showAlert('success', 'ส่งแจ้งซ่อมเรียบร้อย เลขที่: ' + (result.sequenceNumber || '-'));
+
+        document.getElementById('repairForm').reset();
+        selectedImages = [];
+        renderImagePreview();
+        updateImageCount();
+        handleLocationChange();
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      })
+      .withFailureHandler(function(error) {
+        console.error('[FAIL] submitRepairForm:', error);
+
+        toggleLoading(false);
+        if (submitBtn) submitBtn.disabled = false;
+
+        showAlert('error', 'เกิดข้อผิดพลาดในการส่งข้อมูล: ' + (error.message || error));
+      })
+      .submitRepairForm(formData, base64Images);
+
+  } catch (error) {
+    console.error('[FAIL] handleFormSubmit:', error);
+    toggleLoading(false);
+    if (submitBtn) submitBtn.disabled = false;
+    showAlert('error', 'เกิดข้อผิดพลาด: ' + (error.message || error));
+  }
+}
+
+    
+function handleSubmitSuccess(result) {
+  toggleLoading(false);
+
+  if (!result || !result.success) {
+    showAlert('error', `❌ เกิดข้อผิดพลาด: ${(result && result.error) ? result.error : 'ไม่ทราบสาเหตุ'}`);
+    return;
+  }
+
+  const seq = result.sequenceNumber || '';
+  const successMessage =
+    `✅ ส่งแจ้งซ่อมสำเร็จแล้ว!<br>` +
+    `📋 เลขที่: <strong>${seq || 'N/A'}</strong><br>` +
+    `🔍 ระบบกำลังสร้างเอกสาร PDF ในเบื้องหลัง`;
+  showAlert('success', successMessage);
+
+  const hasRun = (typeof google !== 'undefined' && google.script && google.script.run);
+
+  if (hasRun && seq) {
+    try {
+      google.script.run
+        .withSuccessHandler(function () {
+          console.log(`Enqueued PDF job for ${seq}`);
+        })
+        .withFailureHandler(function (err) {
+          console.error('Failed to enqueue PDF job:', err);
+        })
+        .enqueuePdf(seq);
+    } catch (e) {
+      console.error('enqueuePdf call failed:', e);
+    }
+
+    try {
+      google.script.run
+        .withSuccessHandler(function () {
+          console.log('PDF worker process initiated.');
+        })
+        .withFailureHandler(function () {})
+        .pdfWorker(1);
+    } catch (e) {
+      console.error('pdfWorker call failed:', e);
+    }
+  } else {
+    if (!hasRun) console.warn('google.script.run not available, skipping PDF background tasks.');
+    if (!seq) console.warn('No sequenceNumber returned, skipping PDF background tasks.');
+  }
+
+  const form = document.getElementById('repairForm');
+  if (form) form.reset();
+
+  if (typeof handleLocationChange === 'function') handleLocationChange();
+  if (typeof generateTemporarySequenceNumber === 'function') generateTemporarySequenceNumber();
+
+  selectedImages = [];
+  if (typeof renderImagePreview === 'function') renderImagePreview();
+  if (typeof updateImageCount === 'function') updateImageCount();
+}
+
+
+        function handleSubmitError(error) {
+            toggleLoading(false);
+            console.error('Form submission failed:', error);
+            showAlert('error', 'ส่งแจ้งซ่อมไม่สำเร็จ: ' + error.message);
+        }
+
+        function showAlert(type, message) {
+            const successAlert = document.getElementById('alertSuccess');
+            const errorAlert = document.getElementById('alertError');
+            if (successAlert) successAlert.style.display = 'none';
+            if (errorAlert) errorAlert.style.display = 'none';
+
+            if (type === 'success' && successAlert) {
+                const msgSpan = document.getElementById('successMessage');
+                if (msgSpan) msgSpan.innerHTML = message;
+                successAlert.style.display = 'flex';
+            } else if (type === 'error' && errorAlert) {
+                const msgSpan = document.getElementById('errorMessage');
+                if (msgSpan) msgSpan.innerHTML = message;
+                errorAlert.style.display = 'flex';
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function toggleLoading(show) {
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const submitBtn = document.getElementById('submitBtn');
+            if (loadingIndicator) loadingIndicator.style.display = show ? 'flex' : 'none';
+            if (submitBtn) submitBtn.disabled = show;
+        }
+
+
+        /*
+         * [ANCHOR:CLIENT:INDEX:modal-list-scripts]
+         * ✅ Scripts สำหรับจัดการ Modal
+         */
+        const repState = { q: '', page: 1, pageSize: 10, total: 0, loading: false, inited: false };
+
+        function openReportsModal() {
+            const el = document.getElementById('reportsModal');
+            if (!repState.inited) {
+                initReportsModal();
+                repState.inited = true;
+            }
+            el.classList.add('show');
+            el.setAttribute('aria-hidden', 'false');
+            loadReports();
+        }
+
+        function closeReportsModal() {
+            const el = document.getElementById('reportsModal');
+            el.classList.remove('show');
+            el.setAttribute('aria-hidden', 'true');
+        }
+
+        function initReportsModal() {
+            const q = document.getElementById('repSearch');
+            const pgPrev = document.getElementById('pgPrev');
+            const pgNext = document.getElementById('pgNext');
+            const pgSize = document.getElementById('pgSize');
+            let searchTimeout;
+
+            q.addEventListener('input', () => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    repState.q = q.value || '';
+                    repState.page = 1;
+                    loadReports();
+                }, 350);
+            });
+
+            pgPrev.addEventListener('click', () => { if (repState.page > 1) { repState.page--; loadReports(); } });
+            pgNext.addEventListener('click', () => {
+                const max = Math.ceil(repState.total / repState.pageSize) || 1;
+                if (repState.page < max) { repState.page++; loadReports(); }
+            });
+            pgSize.addEventListener('change', () => {
+                repState.pageSize = parseInt(pgSize.value, 10) || 10;
+                repState.page = 1;
+                loadReports();
+            });
+            
+            document.addEventListener('keydown', (e) => {
+              if (e.key === "Escape" && document.getElementById('reportsModal').classList.contains('show')) {
+                closeReportsModal();
+              }
+            });
+        }
+
+        let __glCount = 0;
+
+function setGlobalLoading(show, title, sub) {
+  const ov = document.getElementById('globalLoadingOverlay');
+  const t = document.getElementById('glTitle');
+  const s = document.getElementById('glSub');
+  if (!ov) return;
+
+  if (title && t) t.textContent = title;
+  if (sub && s) s.textContent = sub;
+
+  ov.style.display = show ? 'flex' : 'none';
+  document.body.style.overflow = show ? 'hidden' : '';
+}
+
+function beginBusy(title, sub) {
+  __glCount++;
+  setGlobalLoading(true, title || 'กำลังประมวลผล', sub || 'โปรดรอสักครู่');
+}
+
+function endBusy() {
+  __glCount = Math.max(0, __glCount - 1);
+  if (__glCount === 0) setGlobalLoading(false);
+}
+
+function runServer(methodName, args, title, sub, onSuccess, onFail) {
+  beginBusy(title, sub);
+
+  try {
+    if (typeof google === 'undefined' || !google.script || !google.script.run) {
+      endBusy();
+      if (onFail) onFail(new Error('Google script not available'));
+      return;
+    }
+
+    let chain = google.script.run
+      .withSuccessHandler(function (res) {
+        endBusy();
+        if (onSuccess) onSuccess(res);
+      })
+      .withFailureHandler(function (err) {
+        endBusy();
+        if (onFail) onFail(err);
+      });
+
+    if (Array.isArray(args) && args.length) chain[methodName].apply(chain, args);
+    else chain[methodName]();
+
+  } catch (e) {
+    endBusy();
+    if (onFail) onFail(e);
+  }
+}
+
+  function updateReportsUI() {
+  const modal = document.getElementById('reportsModal');
+  const tb = document.getElementById('repTbody');
+  const search = document.getElementById('repSearch');
+  const prev = document.getElementById('pgPrev');
+  const next = document.getElementById('pgNext');
+  const size = document.getElementById('pgSize');
+
+  const loading = !!repState.loading;
+
+  if (modal) {
+    if (loading) modal.classList.add('is-loading');
+    else modal.classList.remove('is-loading');
+  }
+
+  if (search) search.disabled = loading;
+  if (size) size.disabled = loading;
+
+  if (prev) prev.disabled = loading || prev.disabled;
+  if (next) next.disabled = loading || next.disabled;
+
+  if (tb) tb.setAttribute('aria-busy', loading ? 'true' : 'false');
+}
+
+
+  function loadReports() {
+  if (repState.loading) return;
+
+  repState.loading = true;
+  updateReportsUI();
+
+  beginBusy('กำลังโหลดรายการรายงาน', 'กำลังดึงข้อมูลเอกสารรายงานจากระบบ');
+
+  runServer(
+    'listReports',
+    [{
+      q: repState.q,
+      page: repState.page,
+      pageSize: repState.pageSize
+    }],
+    'กำลังโหลดรายการรายงาน',
+    'กำลังประมวลผลข้อมูล',
+    function (res) {
+      endBusy();
+
+      repState.loading = false;
+      repState.rows = Array.isArray(res && res.rows) ? res.rows : [];
+      repState.total = (res && typeof res.total === 'number') ? res.total : 0;
+
+      renderReportsRows(repState.rows);
+      renderPager();
+      updateReportsUI();
+
+      console.log(`Reports loaded: ${repState.rows.length} / ${repState.total}`);
+    },
+    function (err) {
+      endBusy();
+
+      repState.loading = false;
+      console.error('loadReports error:', err);
+
+      repState.rows = [];
+      repState.total = 0;
+
+      renderReportsRows([]);
+      renderPager();
+      updateReportsUI();
+    }
+  );
+}
+
+function getStatusBadge(statusText) {
+  const s = String(statusText || '').trim();
+
+  if (s === 'เสร็จสิ้น') {
+    return { cls: 'badge badge-status-completed', icon: 'fa-circle-check', text: s };
+  }
+  if (s === 'กำลังดำเนินการ') {
+    return { cls: 'badge badge-status-processing', icon: 'fa-spinner', text: s };
+  }
+
+     if (s === 'ดำเนินการภายนอก') {
+    return { cls: 'badge badge-status-external', icon: 'fa-truck-fast', text: s };
+  }
+
+  if (s === 'รอดำเนินการ') {
+    return { cls: 'badge badge-status-pending', icon: 'fa-hourglass-half', text: s };
+  }
+  if (s === 'ยกเลิก') {
+    return { cls: 'badge badge-status-cancelled', icon: 'fa-circle-xmark', text: s };
+  }
+  if (s === 'พัสดุอยู่ระหว่างรอเบิก' || s === 'รอเบิก') {
+    return { cls: 'badge badge-status-parts', icon: 'fa-box', text: s };
+  }
+
+  return { cls: 'badge badge-status-pending', icon: 'fa-circle-info', text: s || '-' };
+}
+
+function getPriorityBadge(priorityText) {
+  const p = String(priorityText || '').trim();
+
+  if (p === 'ฉุกเฉิน') {
+    return { cls: 'badge badge-prio-critical', icon: 'fa-triangle-exclamation', text: p };
+  }
+  if (p === 'เร่งด่วน') {
+    return { cls: 'badge badge-prio-urgent', icon: 'fa-bolt', text: p };
+  }
+  if (p === 'ปานกลาง') {
+    return { cls: 'badge badge-prio-medium', icon: 'fa-gauge', text: p };
+  }
+  if (p === 'ต่ำ') {
+    return { cls: 'badge badge-prio-low', icon: 'fa-leaf', text: p };
+  }
+
+  return { cls: 'badge badge-prio-low', icon: 'fa-minus', text: p || '-' };
+}
+
+// [ANCHOR: CLIENT: INDEX_LIST]
+// CHANGE: แสดงผลรายการแจ้งซ่อมหน้าแรก โดยใช้วันที่ที่ Format มาแล้ว
+function renderReportsRows(rows) {
+  const tb = document.getElementById('repTbody');
+  if (!tb) return;
+  
+  if (!rows || !rows.length) {
+    tb.innerHTML = `<tr><td colspan="7" class="empty">ไม่พบข้อมูล</td></tr>`;
+    return;
+  }
+  
+  tb.innerHTML = rows.map(r => {
+    // ใช้ฟังก์ชัน Helper (ต้องมีอยู่ใน index.html) เพื่อดึง Class สี
+    const status = getStatusBadge(r.status);
+    const prio = getPriorityBadge(r.prio);
+    
+    // r.date ในที่นี้คือ String ที่ผ่าน formatThaiDateTime มาจาก Server แล้ว
+    return `
+      <tr>
+        <td data-label="เลขที่" class="rep-col-seq">${r.seq}</td>
+        <td data-label="วันที่">
+           <!-- CHANGE: แสดงวันที่และเวลา ตัวหนา -->
+           <div style="font-weight:600;">${r.date}</div> 
+           <div class="rep-meta">${r.owner}</div>
+        </td>
+        <td data-label="ผู้แจ้ง">${r.owner}</td>
+        <td data-label="สถานที่">${r.loc}</td>
+        <td data-label="ประเภท"><i class="fas fa-wrench" style="color:#2563eb; margin-right:5px;"></i> ${r.type}</td>
+        <td data-label="สถานะ"><span class="${status.cls}"><i class="fas ${status.icon}"></i> ${status.text}</span></td>
+        <td data-label="ความเร่งด่วน"><span class="${prio.cls}"><i class="fas ${prio.icon}"></i> ${prio.text}</span></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+        function renderPager() {
+            const max = Math.ceil(repState.total / repState.pageSize) || 1;
+            document.getElementById('pgInfo').textContent = `หน้า ${repState.page} / ${max}`;
+            document.getElementById('pgPrev').disabled = repState.page <= 1;
+            document.getElementById('pgNext').disabled = repState.page >= max;
+            document.getElementById('pgSize').value = repState.pageSize;
+        }
+
+  function initMobileRuntime() {
+  const setVH = () => {
+    document.documentElement.style.setProperty('--app-vh', `${window.innerHeight * 0.01}px`);
+  };
+
+  const lockWideMedia = () => {
+    document.querySelectorAll('img, table, canvas, iframe').forEach(el => {
+      el.style.maxWidth = '100%';
+    });
+  };
+
+  const markTouch = () => {
+    document.body.classList.add('touch-ready');
+  };
+
+  setVH();
+  lockWideMedia();
+  markTouch();
+
+  window.addEventListener('resize', setVH, { passive: true });
+  window.addEventListener('orientationchange', setVH, { passive: true });
+}
+
+document.addEventListener('DOMContentLoaded', initMobileRuntime);
+
+    </script>
+    <div id="globalLoadingOverlay" class="gl-overlay" style="display:none;">
+  <div class="gl-card">
+    <div class="gl-spinner"></div>
+    <div>
+      <div class="gl-title" id="glTitle">กำลังประมวลผล</div>
+      <div class="gl-sub" id="glSub">โปรดรอสักครู่</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
