@@ -2270,7 +2270,31 @@ function buildImageUrl(raw) {
   return baseUrl + '?action=serveImage&id=' + encodeURIComponent(id);
 }
 
+function normalizeText(value) {
+  return String(value == null ? '' : value)
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizeStatusName(input) {
+  const s = normalizeText(input);
+  if (s === 'รอเบิกพัดสุ') return 'พัสดุอยู่ระหว่างรอเบิก';
+  if (s === 'รอเบิกพัสดุ') return 'พัสดุอยู่ระหว่างรอเบิก';
+  return s;
+}
+
+function normalizeBuddhistYear(year) {
+  let y = (typeof year === 'number') ? year : parseInt(year, 10);
+  if (!isFinite(y)) return new Date().getFullYear() + 543;
+  if (y < 2400) return y + 543;
+  while (y > 2600) y -= 543;
+  if (y < 2400) y += 543;
+  return y;
+}
+
 let tableRenderToken = 0;
+let dashboardLoadToken = 0;
 
 function isMobileViewport() {
   return window.matchMedia('(max-width: 768px)').matches;
@@ -2626,6 +2650,7 @@ function setPublicMode() {
     function loadData() {
   console.log('Loading dashboard data.');
   showLoading(true);
+  const requestToken = ++dashboardLoadToken;
 
   runServer(
     'getDashboardData',
@@ -2633,11 +2658,13 @@ function setPublicMode() {
     'กำลังโหลดข้อมูลรายการแจ้งซ่อม',
     'กำลังประมวลผลข้อมูลแดชบอร์ด',
     function (result) {
+      if (requestToken !== dashboardLoadToken) return;
       console.log('Dashboard data received:', result);
       handleDataResponse(result);
       showLoading(false);
     },
     function (error) {
+      if (requestToken !== dashboardLoadToken) return;
       console.error('Load dashboard data error:', error);
       showAlert('error', 'เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + (error.message || error));
       showEmpty();
@@ -2714,73 +2741,83 @@ function setPublicMode() {
         // === CHART DATA PROCESSING ===
       function processChartData() {
             try {
-                if (!chartData) {
-                    chartData = {
-                        statusCount: {
-                            pending: 0,
-                            processing: 0,
-                            parts: 0, // ✅ เพิ่ม: ตัวนับสำหรับสถานะรอเบิกพัสดุ
-                            completed: 0,
-                            cancelled: 0
-                        },
-                        repairTypeCount: {
-                            general: 0,
-                            electrical: 0,
-                            plumbing: 0,
-                            aircon: 0,
-                            computer: 0,
-                            appliance: 0,
-                            other: 0
-                        },
-                        technicianCount: []
-                    };
+                const rows = Array.isArray(filteredData) ? filteredData : [];
+                const nextChartData = {
+                    statusCount: {
+                        pending: 0,
+                        processing: 0,
+                        external: 0,
+                        parts: 0,
+                        completed: 0,
+                        cancelled: 0
+                    },
+                    repairTypeCount: {
+                        general: 0,
+                        electrical: 0,
+                        plumbing: 0,
+                        aircon: 0,
+                        computer: 0,
+                        appliance: 0,
+                        other: 0
+                    },
+                    technicianCount: [],
+                    currentStock: Array.isArray(chartData && chartData.currentStock) ? chartData.currentStock : [],
+                    stockMovement: Array.isArray(chartData && chartData.stockMovement) ? chartData.stockMovement : [],
+                    lowStockItems: Array.isArray(chartData && chartData.lowStockItems) ? chartData.lowStockItems : []
+                };
 
-                    if (filteredData && filteredData.length > 0) {
-                        filteredData.forEach(item => {
-                            // Count by status
-                            // ✅ เพิ่ม: Logic การนับสถานะพัสดุอยู่ระหว่างรอเบิก
-                            if (item.status === 'รอดำเนินการ') {
-                                chartData.statusCount.pending++;
-                            } else if (item.status === 'กำลังดำเนินการ') {
-                                chartData.statusCount.processing++;
-                             } else if (item.status === 'ดำเนินการภายนอก') {
-                                chartData.statusCount.external = (chartData.statusCount.external || 0) + 1;
-                            } else if (item.status === 'พัสดุอยู่ระหว่างรอเบิก') {
-                                chartData.statusCount.parts++; 
-                            } else if (item.status === 'เสร็จสิ้น') {
-                                chartData.statusCount.completed++;
-                            } else if (item.status === 'ยกเลิก') {
-                                chartData.statusCount.cancelled++;
-                            }
+                for (let i = 0; i < rows.length; i++) {
+                    const item = rows[i];
+                    if (!item) continue;
 
-                            // Count by repair type
-                            switch (item.repairType) {
-                                case 'ทั่วไป':
-                                    chartData.repairTypeCount.general++;
-                                    break;
-                                case 'ไฟฟ้า':
-                                    chartData.repairTypeCount.electrical++;
-                                    break;
-                                case 'ประปา':
-                                    chartData.repairTypeCount.plumbing++;
-                                    break;
-                                case 'แอร์':
-                                    chartData.repairTypeCount.aircon++;
-                                    break;
-                                case 'คอมพิวเตอร์':
-                                    chartData.repairTypeCount.computer++;
-                                    break;
-                                case 'เครื่องใช้ไฟฟ้า':
-                                    chartData.repairTypeCount.appliance++;
-                                    break;
-                                default:
-                                    chartData.repairTypeCount.other++;
-                                    break;
-                            }
-                        });
-                        chartData.technicianCount = generateTechnicianStats(filteredData);
+                    switch (item.status) {
+                        case 'รอดำเนินการ':
+                            nextChartData.statusCount.pending++;
+                            break;
+                        case 'กำลังดำเนินการ':
+                            nextChartData.statusCount.processing++;
+                            break;
+                        case 'ดำเนินการภายนอก':
+                            nextChartData.statusCount.external++;
+                            break;
+                        case 'พัสดุอยู่ระหว่างรอเบิก':
+                            nextChartData.statusCount.parts++;
+                            break;
+                        case 'เสร็จสิ้น':
+                            nextChartData.statusCount.completed++;
+                            break;
+                        case 'ยกเลิก':
+                            nextChartData.statusCount.cancelled++;
+                            break;
+                    }
+
+                    switch (item.repairType) {
+                        case 'ทั่วไป':
+                            nextChartData.repairTypeCount.general++;
+                            break;
+                        case 'ไฟฟ้า':
+                            nextChartData.repairTypeCount.electrical++;
+                            break;
+                        case 'ประปา':
+                            nextChartData.repairTypeCount.plumbing++;
+                            break;
+                        case 'แอร์':
+                            nextChartData.repairTypeCount.aircon++;
+                            break;
+                        case 'คอมพิวเตอร์':
+                            nextChartData.repairTypeCount.computer++;
+                            break;
+                        case 'เครื่องใช้ไฟฟ้า':
+                            nextChartData.repairTypeCount.appliance++;
+                            break;
+                        default:
+                            nextChartData.repairTypeCount.other++;
+                            break;
                     }
                 }
+
+                nextChartData.technicianCount = generateTechnicianStats(rows);
+                chartData = nextChartData;
 
                 console.log('📊 Chart data processed:', chartData);
             } catch (error) {
@@ -3021,10 +3058,6 @@ function updateStatusChart() {
             }
             
             try {
-                if (repairTypeChart) {
-                    repairTypeChart.destroy();
-                }
-                
                 const hasData = chartData && chartData.repairTypeCount && 
                     Object.values(chartData.repairTypeCount).some(count => count > 0);
                     
@@ -3052,6 +3085,12 @@ function updateStatusChart() {
                     chartData.repairTypeCount.appliance || 0,
                     chartData.repairTypeCount.other || 0
                 ];
+                
+                if (repairTypeChart) {
+                    repairTypeChart.data.datasets[0].data = repairTypeData;
+                    repairTypeChart.update('none');
+                    return;
+                }
                 
                 repairTypeChart = new Chart(repairTypeCtx, {
                     type: 'bar',
@@ -3146,10 +3185,6 @@ function updateTechnicianChart() {
     return;
   }
 
-  if (window.technicianChartInst) {
-    window.technicianChartInst.destroy();
-  }
-
   const rawData = (chartData && Array.isArray(chartData.technicianCount)) ? chartData.technicianCount : [];
   const hasData = rawData.length > 0;
   const isMobile = window.innerWidth <= 767;
@@ -3162,6 +3197,16 @@ function updateTechnicianChart() {
   const wrapper = canvas.parentElement;
   if (wrapper) {
     wrapper.style.height = isMobile ? '260px' : '320px';
+  }
+
+  if (window.technicianChartInst) {
+    window.technicianChartInst.data.labels = labels;
+    window.technicianChartInst.data.datasets[0].data = pendingData;
+    window.technicianChartInst.data.datasets[1].data = processingData;
+    window.technicianChartInst.data.datasets[2].data = completedData;
+    window.technicianChartInst.options.plugins.legend.position = isMobile ? 'bottom' : 'top';
+    window.technicianChartInst.update('none');
+    return;
   }
 
   window.technicianChartInst = new Chart(canvas, {
@@ -3228,10 +3273,6 @@ function updateCurrentStockChart() {
   var ctx = document.getElementById('currentStockChart');
   if (!ctx) return;
 
-  if (currentStockChart) {
-    currentStockChart.destroy();
-  }
-
   if (!chartData || !chartData.currentStock || chartData.currentStock.length === 0) {
     return;
   }
@@ -3247,6 +3288,13 @@ function updateCurrentStockChart() {
   var data = chartData.currentStock.map(function(item) {
     return item.balance;
   });
+
+  if (currentStockChart) {
+    currentStockChart.data.labels = labels;
+    currentStockChart.data.datasets[0].data = data;
+    currentStockChart.update('none');
+    return;
+  }
 
   currentStockChart = new Chart(ctx, {
     type: 'bar',
@@ -3305,10 +3353,6 @@ function updateStockMovementChart() {
   var ctx = document.getElementById('stockMovementChart');
   if (!ctx) return;
 
-  if (stockMovementChart) {
-    stockMovementChart.destroy();
-  }
-
   if (!chartData || !chartData.stockMovement || chartData.stockMovement.length === 0) {
     return;
   }
@@ -3328,6 +3372,14 @@ function updateStockMovementChart() {
   var outData = chartData.stockMovement.map(function(item) {
     return item.outQty;
   });
+
+  if (stockMovementChart) {
+    stockMovementChart.data.labels = labels;
+    stockMovementChart.data.datasets[0].data = inData;
+    stockMovementChart.data.datasets[1].data = outData;
+    stockMovementChart.update('none');
+    return;
+  }
 
   stockMovementChart = new Chart(ctx, {
     type: 'bar',
@@ -3524,10 +3576,11 @@ function updateLowStockAlert() {
   lowStockCountEl.style.color = summarySeverity.countColor;
   if (metricText) metricText.textContent = summarySeverity.text;
 
-  lowStockListEl.innerHTML = items.map(function(item) {
+  var lowStockHtml = [];
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
     var severity = getSeverity(item);
-
-    return `
+    lowStockHtml.push(`
       <div class="low-stock-item" style="background:${severity.itemBg}; border-color:${severity.borderColor};">
         <div class="low-stock-item-head">
           <div class="low-stock-name" style="color:${severity.textColor};">${item.fullName || item.name}</div>
@@ -3539,8 +3592,9 @@ function updateLowStockAlert() {
           จุดเตือน: ${item.reorderPoint}
         </div>
       </div>
-    `;
-  }).join('');
+    `);
+  }
+  lowStockListEl.innerHTML = lowStockHtml.join('');
 
   console.log('✅ Low stock alert updated successfully');
 }
@@ -3643,19 +3697,33 @@ function showLoading(show) {
     }
 }
           function updateStatistics() {
-            const pending = filteredData.filter(item => item.status === 'รอดำเนินการ').length;
-            const processing = filteredData.filter(item => item.status === 'กำลังดำเนินการ').length;
-            const external = filteredData.filter(item => item.status === 'ดำเนินการภายนอก').length;
-            const parts = filteredData.filter(item => item.status === 'พัสดุอยู่ระหว่างรอเบิก').length;
-            const completed = filteredData.filter(item => item.status === 'เสร็จสิ้น').length;
-            const cancelled = filteredData.filter(item => item.status === 'ยกเลิก').length;
+            let pending = 0;
+            let processing = 0;
+            let external = 0;
+            let parts = 0;
+            let completed = 0;
+            let cancelled = 0;
+
+            (filteredData || []).forEach(function(item) {
+                if (!item) return;
+                if (item.status === 'รอดำเนินการ') pending++;
+                else if (item.status === 'กำลังดำเนินการ') processing++;
+                else if (item.status === 'ดำเนินการภายนอก') external++;
+                else if (item.status === 'พัสดุอยู่ระหว่างรอเบิก') parts++;
+                else if (item.status === 'เสร็จสิ้น') completed++;
+                else if (item.status === 'ยกเลิก') cancelled++;
+            });
             
             document.getElementById('pendingCount').textContent = pending;
             document.getElementById('processingCount').textContent = processing;
             document.getElementById('externalCount').textContent = external;
-            document.getElementById('partsCount').textContent = parts; 
+            document.getElementById('partsCount').textContent = parts;
+            const completedEl = document.getElementById('completedCount');
+            const cancelledEl = document.getElementById('cancelledCount');
+            if (completedEl) completedEl.textContent = completed;
+            if (cancelledEl) cancelledEl.textContent = cancelled;
             
-            console.log('📊 Statistics updated:', { pending, processing, parts, completed, cancelled });
+            console.log('📊 Statistics updated:', { pending, processing, external, parts, completed, cancelled });
         }
 
 
@@ -3691,16 +3759,17 @@ function showLoading(show) {
         // === TABLE RENDERING ===
           function correctDate(dateStr) {
     if (!dateStr || !dateStr.includes('/')) return dateStr;
-    const parts = dateStr.split('/');
+    const parts = String(dateStr).split('/');
     if (parts.length !== 3) return dateStr;
-    let year = parseInt(parts[2]);
-    if (year > 2600) {
-        year -= 543;
-        if (year < 1900 || year > 2100) year = new Date().getFullYear() + 543;
-    } else if (year < 2400) {
-        year += 543;
-    }
-    return `${parts[0]}/${parts[1]}/${year}`;
+
+    let day = parts[0].trim();
+    let month = parts[1].trim();
+    let year = parseInt(parts[2], 10);
+
+    if (!isFinite(year)) return dateStr;
+
+    year = normalizeBuddhistYear(year);
+    return `${day}/${month}/${year}`;
 }
 
     function getStatusClass(status) {
@@ -3713,7 +3782,7 @@ function showLoading(show) {
                 'เสร็จสิ้น': 'status-completed',
                 'ยกเลิก': 'status-cancelled'
             };
-            return classes[status] || 'status-pending';
+            return classes[normalizeStatusName(status)] || 'status-pending';
         }
 
   function getPriorityClass(priority) {
@@ -3723,7 +3792,7 @@ function showLoading(show) {
         'ปานกลาง': 'status-processing',  // น้ำเงิน
         'ไม่เร่งด่วน': 'status-completed'  // เขียว
     };
-    return classes[priority] || 'status-processing';  // Fallback เป็นปานกลาง
+    return classes[normalizeText(priority)] || 'status-processing';  // Fallback เป็นปานกลาง
 }
 
 function renderTable() {
@@ -3809,38 +3878,39 @@ function renderTable() {
 function createTableRow(item) {
     const row = document.createElement('tr');
     row.className = 'fade-in';
-    const sequenceEscaped = (item.sequenceNumber || '').replace(/'/g, "\\'");
+    const esc = function(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    };
+    const sequenceEscaped = esc(item.sequenceNumber || '');
     
-    // ตรวจสอบข้อมูลรูปภาพ
     const validImageUrls = (item.imageUrls && Array.isArray(item.imageUrls)) ?
         item.imageUrls.filter(url => url && typeof url === 'string' && url.trim() !== '') : [];
     const hasImages = validImageUrls.length > 0;
     
-    // สร้างปุ่ม Actions HTML เต็มรูปแบบ
     let actionsHTML = '';
 
-    // ปุ่มดูเอกสาร (PDF)
-    if (item.url && item.url !== '#' && item.url.trim()) { 
-        actionsHTML += `<a href="${item.url}" target="_blank" class="action-btn view" title="ดูเอกสาร"><i class="fas fa-file-alt action-icon icon-view"></i> ดู</a>`; 
+    if (item.url && item.url !== '#' && String(item.url).trim()) { 
+        actionsHTML += `<a href="${esc(item.url)}" target="_blank" class="action-btn view" title="ดูเอกสาร"><i class="fas fa-file-alt action-icon icon-view"></i> ดู</a>`; 
     }
     
-    // ปุ่มดูรูปภาพ
     if (hasImages) { 
         actionsHTML += `<button class="action-btn images" onclick="showImageGallery('${sequenceEscaped}')" title="ดูรูปภาพ (${validImageUrls.length} รูป)"><i class="fas fa-camera-retro action-icon icon-images"></i> รูป (${validImageUrls.length})</button>`; 
     } else { 
         actionsHTML += `<button class="action-btn images" disabled title="ไม่มีรูปภาพประกอบ"><i class="fas fa-camera-slash action-icon icon-images"></i> ไม่มีรูป</button>`; 
     }
     
-    // ปุ่มรายละเอียด (แสดงตลอด)
     actionsHTML += `<button class="action-btn info" onclick="showDetail('${sequenceEscaped}')" title="ดูรายละเอียด"><i class="fas fa-eye action-icon icon-detail"></i> รายละเอียด</button>`;
     
-    // ปุ่มสำหรับ Admin/Technician (แก้ไข/ลบ)
     if (isLoggedIn && currentUser) {
         if (currentUser.role === 'admin' || currentUser.role === 'technician') {
             actionsHTML += `<button class="action-btn edit" onclick="updateStatus('${sequenceEscaped}')" title="แก้ไขสถานะ"><i class="fas fa-wrench action-icon icon-edit"></i> แก้ไข</button>`;
             actionsHTML += `<button class="action-btn delete" onclick="deleteRepair('${sequenceEscaped}')" title="ลบรายการ"><i class="fas fa-trash-alt action-icon icon-delete"></i> ลบ</button>`;
         }
-        // ปุ่มมอบหมายงาน (เฉพาะ Admin)
         if (currentUser.role === 'admin') {
             actionsHTML += `<button class="action-btn assign" onclick="assignTask('${sequenceEscaped}')" title="มอบหมายงานให้ช่าง"><i class="fas fa-user-check action-icon icon-assign"></i> มอบหมาย</button>`;
         }
@@ -3848,22 +3918,21 @@ function createTableRow(item) {
     
     const statusClass = getStatusClass(item.status);
     
-    // CHANGE: item.date ตอนนี้เป็น String "dd/MM/yyyy HH:mm น." จาก Server แล้ว นำมาแสดงได้เลย
     row.innerHTML = `
-        <td data-label="เลขที่:"><div class="table-row-number"><i class="fas fa-hashtag"></i>${item.sequenceNumber || '-'}</div></td>
+        <td data-label="เลขที่:"><div class="table-row-number"><i class="fas fa-hashtag"></i>${esc(item.sequenceNumber || '-')}</div></td>
         <td data-label="วันที่/เวลา:">
             <div class="table-date" style="flex-direction: column; align-items: flex-start; gap: 2px;">
                 <div style="display:flex; align-items:center; gap:5px;">
                     <i class="fas fa-calendar-alt"></i>
-                    <span style="font-weight:600; font-size: 0.9em;">${item.date || '-'}</span>
+                    <span style="font-weight:600; font-size: 0.9em;">${esc(item.date || '-')}</span>
                 </div>
             </div>
         </td>
-        <td data-label="ผู้แจ้งซ่อม:"><div class="table-requester"><i class="fas fa-user"></i><span>${item.requesterName || '-'}</span></div></td>
-        <td data-label="รายการ:"><div class="table-repair-item"><i class="fas fa-tools"></i><div>${item.repairItem || '-'}</div></div></td>
-        <td data-label="สถานที่:"><div class="table-location"><i class="fas fa-map-marker-alt"></i><div>${item.location || '-'}</div></div></td>
-        <td data-label="ผู้รับผิดชอบ:"><div class="table-technician"><i class="fas fa-user-cog"></i><span>${item.assignedTechnician || '-'}</span></div></td>
-        <td data-label="สถานะ:"><span class="status-badge ${statusClass}">${item.status || 'ไม่ระบุ'}</span></td>
+        <td data-label="ผู้แจ้งซ่อม:"><div class="table-requester"><i class="fas fa-user"></i><span>${esc(item.requesterName || '-')}</span></div></td>
+        <td data-label="รายการ:"><div class="table-repair-item"><i class="fas fa-tools"></i><div>${esc(item.repairItem || '-')}</div></div></td>
+        <td data-label="สถานที่:"><div class="table-location"><i class="fas fa-map-marker-alt"></i><div>${esc(item.location || '-')}</div></div></td>
+        <td data-label="ผู้รับผิดชอบ:"><div class="table-technician"><i class="fas fa-user-cog"></i><span>${esc(item.assignedTechnician || '-')}</span></div></td>
+        <td data-label="สถานะ:"><span class="status-badge ${statusClass}">${esc(item.status || 'ไม่ระบุ')}</span></td>
         <td data-label="การจัดการ:"><div class="actions">${actionsHTML}</div></td>
     `;
     return row;
@@ -3880,26 +3949,33 @@ function showDetail(sequenceNumber) {
     
     const modal = document.getElementById('detailModal');
     const content = document.getElementById('detailContent');
+    const esc = function(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    };
     
-    // ใช้ item.date ตรงๆ ได้เลย เพราะ Server Format มาให้แล้ว
     content.innerHTML = `
-        <h3>รายละเอียดการแจ้งซ่อม: ${item.sequenceNumber}</h3>
+        <h3>รายละเอียดการแจ้งซ่อม: ${esc(item.sequenceNumber || '-')}</h3>
         <div style="margin: 1.5rem 0;">
-            <p><strong>📅 วันที่/เวลาแจ้ง:</strong> ${item.date || '-'}</p>
-            <p><strong>👤 ผู้แจ้ง:</strong> ${item.requesterName || '-'}</p>
-            <p><strong>📞 เบอร์โทร:</strong> ${item.phoneNumber || '-'}</p>
-            <p><strong>🔧 ประเภทงาน:</strong> ${item.repairType || '-'}</p>
-            <p><strong>📝 รายการซ่อม:</strong> ${item.repairItem || '-'}</p>
-            <p><strong>📄 รายละเอียด:</strong> ${item.description || '-'}</p>
-            <p><strong>📍 สถานที่:</strong> ${item.location || '-'}</p>
-            <p><strong>⚡ ความเร่งด่วน:</strong> ${item.priority || '-'}</p>
-            <p><strong>👨‍🔧 ผู้รับผิดชอบ:</strong> ${item.assignedTechnician || '-'}</p>
-            <p><strong>📊 สถานะ:</strong> <span class="status-badge ${getStatusClass(item.status)}">${item.status || '-'}</span></p>
-            <p><strong>📝 หมายเหตุ:</strong> ${item.notes || '-'}</p>
+            <p><strong>📅 วันที่/เวลาแจ้ง:</strong> ${esc(item.date || '-')}</p>
+            <p><strong>👤 ผู้แจ้ง:</strong> ${esc(item.requesterName || '-')}</p>
+            <p><strong>📞 เบอร์โทร:</strong> ${esc(item.phoneNumber || '-')}</p>
+            <p><strong>🔧 ประเภทงาน:</strong> ${esc(item.repairType || '-')}</p>
+            <p><strong>📝 รายการซ่อม:</strong> ${esc(item.repairItem || '-')}</p>
+            <p><strong>📄 รายละเอียด:</strong> ${esc(item.description || '-')}</p>
+            <p><strong>📍 สถานที่:</strong> ${esc(item.location || '-')}</p>
+            <p><strong>⚡ ความเร่งด่วน:</strong> ${esc(item.priority || '-')}</p>
+            <p><strong>👨‍🔧 ผู้รับผิดชอบ:</strong> ${esc(item.assignedTechnician || '-')}</p>
+            <p><strong>📊 สถานะ:</strong> <span class="status-badge ${getStatusClass(item.status)}">${esc(item.status || '-')}</span></p>
+            <p><strong>📝 หมายเหตุ:</strong> ${esc(item.notes || '-')}</p>
             ${item.imageUrls && item.imageUrls.length > 0 ? `<p><strong>📷 รูปภาพ:</strong> ${item.imageUrls.length} รูป</p>` : ''}
         </div>
         <div class="dialog-buttons">
-            ${item.imageUrls && item.imageUrls.length > 0 ? `<button class="dialog-btn primary" onclick="closeDetailModal(); showImageGallery('${item.sequenceNumber}');">ดูรูปภาพ</button>` : ''}
+            ${item.imageUrls && item.imageUrls.length > 0 ? `<button class="dialog-btn primary" onclick="closeDetailModal(); showImageGallery('${esc(item.sequenceNumber)}');">ดูรูปภาพ</button>` : ''}
             <button class="dialog-btn cancel" onclick="closeDetailModal()">ปิด</button>
         </div>
     `;
@@ -4267,7 +4343,23 @@ function showImageModal(imageUrl) {
                 editForm.addEventListener('submit', function(e) {
                     e.preventDefault();
                     const form = e.target;
+                    const saveBtn = document.getElementById('saveChangesBtn');
+                    const saveBtnHtml = saveBtn ? saveBtn.innerHTML : '';
+                    const restoreSaveBtn = () => {
+                        if (saveBtn) {
+                            saveBtn.disabled = false;
+                            saveBtn.innerHTML = saveBtnHtml;
+                        }
+                    };
+
+                    if (saveBtn && saveBtn.disabled) return;
+                    if (saveBtn) {
+                        saveBtn.disabled = true;
+                        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังบันทึก...';
+                    }
+
                     const sequenceNumber = form.elements.sequenceNumber.value;
+                    const requestSequenceNumber = sequenceNumber;
                     const newStatus = form.elements.status.value;
                     const rawUpdateDate = form.elements.updateDate.value.trim(); // รับค่า text พ.ศ.
                     const notes = form.elements.notes.value;
@@ -4285,6 +4377,7 @@ function showImageModal(imageUrl) {
                         const minutes = parseInt(dateMatch[5], 10);
                         updateDateObj = new Date(year, month, day, hours, minutes);
                     } else {
+                        restoreSaveBtn();
                         showAlert('error', 'รูปแบบวันที่ไม่ถูกต้อง กรุณาระบุแบบ วว/ดด/ปปปป HH:mm');
                         return; // หยุดการทำงานถ้าผู้ใช้กรอกผิดฟอร์แมต
                     }
@@ -4299,7 +4392,7 @@ function showImageModal(imageUrl) {
                     const payload = {
                         sequenceNumber: sequenceNumber,
                         newStatus: newStatus,
-                        updateDate: updateDate, // ส่งวันที่ไปด้วย
+                        updateDate: updateDateObj ? updateDateObj.toISOString() : null, // ส่งวันที่ไปด้วย
                         notes: notes,
                         technician: assignedTechnician,
                         currentUser: currentUser,
@@ -4307,12 +4400,11 @@ function showImageModal(imageUrl) {
                     };
 
                     showAlert('info', 'กำลังอัปเดตข้อมูลและอัปโหลดรูปภาพ...');
-                    const saveBtn = document.getElementById('saveChangesBtn');
-                    if (saveBtn) saveBtn.disabled = true;
 
                     google.script.run
                         .withSuccessHandler(function(result) {
-                            if (saveBtn) saveBtn.disabled = false;
+                            restoreSaveBtn();
+                            if (form.elements.sequenceNumber.value !== requestSequenceNumber) return;
                             if (result && result.success) {
                                 showAlert('success', 'อัปเดตสถานะเรียบร้อยแล้ว');
                                 closeEditModal();
@@ -4322,7 +4414,8 @@ function showImageModal(imageUrl) {
                             }
                         })
                         .withFailureHandler(function(error) {
-                            if (saveBtn) saveBtn.disabled = false;
+                            restoreSaveBtn();
+                            if (form.elements.sequenceNumber.value !== requestSequenceNumber) return;
                             showAlert('error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error.message);
                         })
                         .updateRepairStatus(payload); // [แก้ไข: ส่งก้อน Payload ไปเลย]
@@ -4376,11 +4469,25 @@ function showImageModal(imageUrl) {
 
                     showAlert('info', 'กำลังบันทึกการมอบหมาย...');
                     const assignBtn = document.getElementById('saveAssignmentBtn');
-                    if (assignBtn) assignBtn.disabled = true;
+                    const assignBtnHtml = assignBtn ? assignBtn.innerHTML : '';
+                    if (assignBtn) {
+                        assignBtn.disabled = true;
+                        assignBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังมอบหมาย...';
+                    }
+                    const payload = {
+                        sequenceNumber: sequenceNumber,
+                        newStatus: newStatus,
+                        technician: assignedTechnician,
+                        notes: notes,
+                        currentUser: currentUser
+                    };
 
                     google.script.run
                         .withSuccessHandler(function(result) {
-                            if (assignBtn) assignBtn.disabled = false;
+                            if (assignBtn) {
+                                assignBtn.disabled = false;
+                                assignBtn.innerHTML = assignBtnHtml;
+                            }
                             if (result && result.success) {
                                 showAlert('success', 'มอบหมายงานเรียบร้อยแล้ว');
                                 closeAssignModal();
@@ -4390,10 +4497,13 @@ function showImageModal(imageUrl) {
                             }
                         })
                         .withFailureHandler(function(error) {
-                            if (assignBtn) assignBtn.disabled = false;
+                            if (assignBtn) {
+                                assignBtn.disabled = false;
+                                assignBtn.innerHTML = assignBtnHtml;
+                            }
                             showAlert('error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error.message);
                         })
-                        .updateRepairStatus(sequenceNumber, newStatus, assignedTechnician, notes, currentUser);
+                        .updateRepairStatus(payload);
                 });
             }
         });
@@ -4473,23 +4583,7 @@ function showImageModal(imageUrl) {
 // CHANGE: รวมให้เหลือ 1 ชุดเท่านั้น (กันฟังก์ชันซ้ำทับกัน) + เปิด PDF จาก result.pdfUrl + ตัด demo/mock ออก
 
 function ensureBuddhistYear(year) {
-  // [ANCHOR: REPORT-YEAR-NORMALIZE]
-  // CHANGE: รวม logic แปลงปีไว้จุดเดียว
-  var y = (typeof year === 'number') ? year : parseInt(year, 10);
-
-  if (!isFinite(y)) return (new Date().getFullYear() + 543);
-
-  // ถ้าเป็น ค.ศ. ให้แปลงเป็น พ.ศ.
-  if (y < 2400) return y + 543;
-
-  // ถ้าเลขปีเพี้ยนเกินจริง ให้พยายามแก้กลับ (กรณีบวก 543 ซ้ำ)
-  if (y > 3000) {
-    // ลดทีละ 543 จนเข้าโซนสมเหตุสมผล
-    while (y > 3000) y -= 543;
-    if (y < 2400) y += 543;
-  }
-
-  return y;
+  return normalizeBuddhistYear(year);
 }
 
 //[ANCHOR: REPORT-DOUBLE-SUBMIT]
@@ -4501,10 +4595,7 @@ function generateMonthlyReport() {
   var generateBtn = document.getElementById('generateReportBtn');
 
   function normalizeTechnicianName(value) {
-    return String(value == null ? '' : value)
-      .replace(/[\r\n]+/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+    return normalizeText(value);
   }
 
   function resetGenerateButton() {
@@ -4546,7 +4637,13 @@ function generateMonthlyReport() {
     return;
   }
 
-  var year = ensureBuddhistYear(yearRaw);
+  if (!isFinite(yearRaw)) {
+    showAlert('error', 'ปีไม่ถูกต้อง');
+    return;
+  }
+
+  var year = yearRaw > 2400 ? yearRaw - 543 : yearRaw;
+  var displayYear = ensureBuddhistYear(yearRaw);
   if (generateBtn && generateBtn.disabled) return;
 
   if (generateBtn) {
@@ -4557,13 +4654,14 @@ function generateMonthlyReport() {
 
   var monthName = (typeof MONTHS_TH !== 'undefined' && MONTHS_TH[month - 1]) ? MONTHS_TH[month - 1] : ('เดือน ' + month);
   var reportLabel = selectedTechnician
-    ? ('รายงานของ ' + selectedTechnician + ' เดือน ' + monthName + ' ' + year)
-    : ('รายงานรวมทุกคน เดือน ' + monthName + ' ' + year);
+    ? ('รายงานของ ' + selectedTechnician + ' เดือน ' + monthName + ' ' + displayYear)
+    : ('รายงานรวมทุกคน เดือน ' + monthName + ' ' + displayYear);
 
   showAlert('info', 'กำลังสร้าง' + reportLabel + ' กรุณารอสักครู่...');
 
   console.log('📦 Report payload before send:', {
     year: year,
+    displayYear: displayYear,
     month: month,
     technician: selectedTechnician || '',
     mode: selectedTechnician ? 'single-technician' : 'all-technicians'
@@ -4597,7 +4695,10 @@ function generateMonthlyReport() {
           showAlert('success', '✅ สร้างรายงาน "' + (result.docName || '') + '" เรียบร้อยแล้ว');
 
           if (result.pdfUrl) {
-            window.open(result.pdfUrl, '_blank');
+            var pdfWindow = window.open(result.pdfUrl, '_blank');
+            if (!pdfWindow) {
+              showAlert('info', 'สร้างรายงานสำเร็จแล้ว หากเบราว์เซอร์บล็อก popup ให้กดปุ่มเปิด PDF ในตัวอย่างรายงาน');
+            }
           } else {
             showAlert('error', 'สร้างรายงานสำเร็จ แต่ไม่พบลิงก์ PDF');
           }

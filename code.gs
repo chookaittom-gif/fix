@@ -1,23 +1,49 @@
 // ----------------------------------------------------------------
 // SECTION: ⚙️ การตั้งค่าหลัก (กรุณาใส่ ID จริงของคุณที่นี่)
 // ----------------------------------------------------------------
+const STATUS = {
+  PENDING: 'รอดำเนินการ',
+  PROCESSING: 'กำลังดำเนินการ',
+  EXTERNAL: 'ดำเนินการภายนอก',
+  PARTS: 'พัสดุอยู่ระหว่างรอเบิก',
+  COMPLETED: 'เสร็จสิ้น',
+  CANCELLED: 'ยกเลิก',
+  PARTS_ALT: 'รอเบิกพัสดุ'
+};
+
+const PRIORITY = {
+  EMERGENCY: 'ฉุกเฉิน',
+  URGENT: 'เร่งด่วน',
+  MEDIUM: 'ปานกลาง',
+  LOW: 'ต่ำ',
+  LOW_ALT: 'ไม่เร่งด่วน'
+};
+
+const ROLES = {
+  ADMIN: 'admin',
+  TECHNICIAN: 'technician',
+  USER: 'user'
+};
+
 const CONFIG = {
-  SPREADSHEET_ID:   '1T8KBzzCTP1wxV3N_tytjskGGgfFiy2CzTwdKiGHcVdI',
+  SPREADSHEET_ID:   PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID'),
   SHEET_NAME:       'รายการแจ้งซ่อมทั้งหมด',
+  STATUS_LOG_SHEET_NAME: 'ประวัติสถานะงานซ่อม',
   USER_SHEET_NAME:  'users',
-  TEMPLATE_ID:      '1LJ4-UJb0YDG3BhxVObveqTQ94pJuMrRn5T5YLq-R0FQ',
-  TARGET_FOLDER_ID: '1rnU9f_ocrzYBZcG_gco6z9bwrvSGjTLy',
-  IMAGE_FOLDER_ID:  '1y4_3X9k7Cqiaq7CGpNI7SuLaNiqN6uKa',
+  TEMPLATE_ID:      PropertiesService.getScriptProperties().getProperty('TEMPLATE_ID'),
+  TARGET_FOLDER_ID: PropertiesService.getScriptProperties().getProperty('TARGET_FOLDER_ID'),
+  IMAGE_FOLDER_ID:  PropertiesService.getScriptProperties().getProperty('IMAGE_FOLDER_ID'),
   FONT_FAMILY:      'TH SarabunPSK',
   MONTHS_TH: [
     'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
     'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
   ],
-  TELEGRAM_BOT_TOKEN: '7853279472:AAFtiwvE_394_RJEGhG2x8GuiCoOC2DWuHs',
-  TELEGRAM_CHAT_ID:   '-4985195126',
+  TELEGRAM_BOT_TOKEN: PropertiesService.getScriptProperties().getProperty('TELEGRAM_BOT_TOKEN'),
+  TELEGRAM_CHAT_ID:   PropertiesService.getScriptProperties().getProperty('TELEGRAM_CHAT_ID'),
 
   // 🔽 โลโก้รายงาน PDF
-  REPORT_LOGO_FILE_ID: '1-TsKg4J-cxs-b-q0jCi9uioIVH5WCfJM'
+  REPORT_LOGO_FILE_ID: PropertiesService.getScriptProperties().getProperty('REPORT_LOGO_FILE_ID'),
+  IS_TEST_MODE: PropertiesService.getScriptProperties().getProperty('IS_TEST_MODE') === 'true'
 };
 
 // ----------------------------------------------------------------
@@ -81,24 +107,28 @@ function include(filename) {
 // ----------------------------------------------------------------
 function submitRepairForm(formData, imageFiles) {
   try {
-    if (!formData || !formData['{{ชื่อผู้แจ้งซ่อม}}'] || !formData['{{รายการแจ้งซ่อม}}']) {
+    if (!formData || !formData.requesterName || !formData.repairItem) {
       throw new Error('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน');
     }
 
     const sequenceNumber = generateSequenceNumber();
-    formData['{{เลขที่}}'] = sequenceNumber;
-    formData['{{วันที่}}'] = getCurrentThaiDate();
+    const now = new Date();
+
+    formData.sequenceNumber = sequenceNumber;
+    formData.currentDateTime = now;
 
     const imageUrls = (imageFiles && imageFiles.length > 0) ? uploadImages(imageFiles, sequenceNumber) : [];
 
-    saveToSheetPendingPdf(formData, imageUrls);
+    saveToSheetPendingPdf(formData, '', '', imageUrls);
+
+    try { CacheService.getScriptCache().remove('dashboard:data:v3'); } catch(e) {}
 
     const queued = enqueuePdf(sequenceNumber);
     if (!queued || !queued.success) {
       throw new Error(queued && queued.error ? queued.error : 'ไม่สามารถเข้าคิวสร้าง PDF ได้');
     }
 
-    sendNewRepairNotification(formData, '', imageUrls);
+    sendNewRepairNotification(buildNewRepairNotificationData_(formData, sequenceNumber), '', imageUrls);
 
     return {
       success: true,
@@ -109,6 +139,58 @@ function submitRepairForm(formData, imageFiles) {
     Logger.log('CRITICAL ERROR in submitRepairForm: ' + error.stack);
     return { success: false, error: error.message };
   }
+}
+
+function buildNewRepairNotificationData_(formData, sequenceNumber) {
+  formData = formData || {};
+
+  return {
+    '{{เลขที่}}': sequenceNumber,
+    '{{วันที่}}': getCurrentThaiDate(),
+    '{{ชื่อผู้แจ้งซ่อม}}': formData.requesterName,
+    '{{เบอร์โทร}}': formData.phoneNumber,
+    '{{สถานที่}}': formData.location,
+    '{{ประเภทงานซ่อม}}': formData.repairType,
+    '{{รายการแจ้งซ่อม}}': formData.repairItem,
+    '{{อาการ}}': formData.description,
+    '{{ความเร่งด่วน}}': formData.priority
+  };
+}
+
+function selfTestNewRepairNotificationDataMapping_() {
+  const data = buildNewRepairNotificationData_({
+    requesterName: 'ทดสอบระบบ',
+    phoneNumber: '0858138974',
+    location: 'ทดสอบระบบ (ชั้น 1)',
+    repairType: 'ประปา',
+    repairItem: 'ท่อปะปาแตก',
+    description: 'น้ำไหลไม่หยุด',
+    priority: 'ปานกลาง'
+  }, 'SDUL-TEST-001');
+
+  const checks = {
+    '{{เลขที่}}': 'SDUL-TEST-001',
+    '{{ชื่อผู้แจ้งซ่อม}}': 'ทดสอบระบบ',
+    '{{เบอร์โทร}}': '0858138974',
+    '{{สถานที่}}': 'ทดสอบระบบ (ชั้น 1)',
+    '{{ประเภทงานซ่อม}}': 'ประปา',
+    '{{รายการแจ้งซ่อม}}': 'ท่อปะปาแตก',
+    '{{อาการ}}': 'น้ำไหลไม่หยุด',
+    '{{ความเร่งด่วน}}': 'ปานกลาง'
+  };
+
+  Object.keys(checks).forEach(function(key) {
+    if (data[key] !== checks[key]) {
+      throw new Error('selfTestNewRepairNotificationDataMapping_ failed: ' + key + ' expected=' + checks[key] + ' actual=' + data[key]);
+    }
+  });
+
+  const edgeData = buildNewRepairNotificationData_({ repairItem: 'ทดสอบ edge case' }, 'SDUL-TEST-EDGE');
+  if (edgeData['{{เลขที่}}'] !== 'SDUL-TEST-EDGE' || edgeData['{{รายการแจ้งซ่อม}}'] !== 'ทดสอบ edge case') {
+    throw new Error('selfTestNewRepairNotificationDataMapping_ edge failed');
+  }
+
+  return { success: true, message: 'new repair notification mapping ok' };
 }
 
 
@@ -233,6 +315,176 @@ function helpMapHeadersFromSheet(sheet) {
   return { headers, map };
 }
 
+function getStatusLogSheet_() {
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheetName = CONFIG.STATUS_LOG_SHEET_NAME || 'ประวัติสถานะงานซ่อม';
+  let sheet = ss.getSheetByName(sheetName);
+  const headers = ['วันที่บันทึก', 'เลขที่', 'สถานะ', 'หมายเหตุ', 'ผู้บันทึก', 'รูปภาพ'];
+
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+    sheet.setFrozenRows(1);
+    return sheet;
+  }
+
+  const firstRow = sheet.getRange(1, 1, 1, headers.length).getValues()[0].map(function(h) {
+    return String(h || '').trim();
+  });
+  if (firstRow.join('') === '') {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+
+  return sheet;
+}
+
+function getStatusLogUserName_(userObj) {
+  if (!userObj) return '';
+  return String(userObj.displayName || userObj.name || userObj.username || userObj.email || '').trim();
+}
+
+function appendStatusLog_(sequenceNumber, status, note, userObj, imageUrls) {
+  const sheet = getStatusLogSheet_();
+  const images = Array.isArray(imageUrls) ? imageUrls.filter(Boolean).join(',') : '';
+  const logDate = new Date();
+  const logData = {
+    'วันที่บันทึก': logDate,
+    'เลขที่': String(sequenceNumber || '').trim(),
+    'สถานะ': String(status || '').trim(),
+    'หมายเหตุ': String(note || '').trim() || '-',
+    'ผู้บันทึก': getStatusLogUserName_(userObj),
+    'รูปภาพ': images
+  };
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(function(h) {
+    return String(h || '').trim();
+  });
+  const row = new Array(headers.length).fill('');
+  headers.forEach(function(h, i) {
+    if (Object.prototype.hasOwnProperty.call(logData, h)) row[i] = logData[h];
+  });
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow > 1) {
+    const lastValues = sheet.getRange(lastRow, 1, 1, headers.length).getValues()[0];
+    const idx = function(name) { return headers.indexOf(name); };
+    const cDate = idx('วันที่บันทึก');
+    const cSeq = idx('เลขที่');
+    const cStatus = idx('สถานะ');
+    const cNote = idx('หมายเหตุ');
+    const cUser = idx('ผู้บันทึก');
+    const cImage = idx('รูปภาพ');
+    const lastDate = cDate > -1 ? lastValues[cDate] : null;
+    const isRecent = lastDate instanceof Date && (logDate.getTime() - lastDate.getTime()) < 10000;
+    const isSameLog = String(lastValues[cSeq] || '').trim() === logData['เลขที่']
+      && String(lastValues[cStatus] || '').trim() === logData['สถานะ']
+      && String(lastValues[cNote] || '').trim() === logData['หมายเหตุ']
+      && String(lastValues[cUser] || '').trim() === logData['ผู้บันทึก']
+      && String(lastValues[cImage] || '').trim() === logData['รูปภาพ'];
+    if (isRecent && isSameLog) return;
+  }
+
+  sheet.appendRow(row);
+}
+
+function getStatusLogValues_() {
+  const sheet = getStatusLogSheet_();
+  const values = sheet.getDataRange().getValues();
+  return values && values.length > 1 ? values : [];
+}
+
+function getStatusLogsBySequence(sequenceNumber, fallbackRow, statusLogValues) {
+  const target = String(sequenceNumber || '').trim();
+  if (!target) return [];
+
+  let fallback = fallbackRow || null;
+  let values = statusLogValues || null;
+  if (Array.isArray(fallbackRow)) {
+    values = fallbackRow;
+    fallback = null;
+  }
+
+  values = values || getStatusLogValues_();
+  if (!values || values.length < 2) return fallback ? [fallback] : [];
+
+  const headers = values[0].map(function(h) { return String(h || '').trim(); });
+  const idx = function(name) { return headers.indexOf(name); };
+  const cSeq = idx('เลขที่');
+  const cStatus = idx('สถานะ');
+  const cNote = idx('หมายเหตุ');
+  const cUser = idx('ผู้บันทึก');
+  const cDate = idx('วันที่บันทึก');
+  const cImage = idx('รูปภาพ');
+
+  if (cSeq < 0 || cStatus < 0 || cDate < 0) return fallback ? [fallback] : [];
+
+  const logs = values.slice(1)
+    .filter(function(row) { return String(row[cSeq] || '').trim() === target; })
+    .map(function(row) {
+      const imageText = cImage > -1 ? String(row[cImage] || '').trim() : '';
+      return {
+        sequenceNumber: target,
+        status: cStatus > -1 ? String(row[cStatus] || '').trim() : '',
+        note: cNote > -1 ? String(row[cNote] || '').trim() : '',
+        user: cUser > -1 ? String(row[cUser] || '').trim() : '',
+        date: cDate > -1 ? row[cDate] : '',
+        imageIds: imageText ? imageText.split(',').map(function(x) {
+          const raw = String(x).trim();
+          return typeof extractFileIdFromUrl === 'function' ? extractFileIdFromUrl(raw) : raw;
+        }).filter(Boolean) : []
+      };
+    })
+    .sort(function(a, b) {
+      const da = a.date instanceof Date ? a.date.getTime() : 0;
+      const db = b.date instanceof Date ? b.date.getTime() : 0;
+      return da - db;
+    });
+
+  return logs.length ? logs : (fallback ? [fallback] : []);
+}
+
+function buildStatusLogMap_(statusLogValues) {
+  const values = statusLogValues || getStatusLogValues_();
+  if (!values || values.length < 2) return {};
+
+  const headers = values[0].map(function(h) { return String(h || '').trim(); });
+  const cSeq = headers.indexOf('เลขที่');
+  const cStatus = headers.indexOf('สถานะ');
+  const cNote = headers.indexOf('หมายเหตุ');
+  const cUser = headers.indexOf('ผู้บันทึก');
+  const cDate = headers.indexOf('วันที่บันทึก');
+  const cImage = headers.indexOf('รูปภาพ');
+  if (cSeq < 0 || cStatus < 0 || cDate < 0) return {};
+
+  const map = {};
+  values.slice(1).forEach(function(row) {
+    const seq = String(row[cSeq] || '').trim();
+    if (!seq) return;
+    const imageText = cImage > -1 ? String(row[cImage] || '').trim() : '';
+    if (!map[seq]) map[seq] = [];
+    map[seq].push({
+      sequenceNumber: seq,
+      status: cStatus > -1 ? String(row[cStatus] || '').trim() : '',
+      note: cNote > -1 ? String(row[cNote] || '').trim() : '',
+      user: cUser > -1 ? String(row[cUser] || '').trim() : '',
+      date: cDate > -1 ? row[cDate] : '',
+      imageIds: imageText ? imageText.split(',').map(function(x) {
+        const raw = String(x).trim();
+        return typeof extractFileIdFromUrl === 'function' ? extractFileIdFromUrl(raw) : raw;
+      }).filter(Boolean) : []
+    });
+  });
+
+  Object.keys(map).forEach(function(seq) {
+    map[seq].sort(function(a, b) {
+      const da = a.date instanceof Date ? a.date.getTime() : 0;
+      const db = b.date instanceof Date ? b.date.getTime() : 0;
+      return da - db;
+    });
+  });
+  return map;
+}
+
 function helpFindRowBySequence(sheet, sequenceNumber) {
   // CHANGE: robust finder (values + displayValues + TextFinder) + normalize
   if (!sheet) return 0;
@@ -301,50 +553,56 @@ function saveToSheet(formData) {
 
   const now = new Date();
   const sequenceNumber = (formData && formData.sequenceNumber) ? String(formData.sequenceNumber).trim() : generateSequenceNumber();
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
 
-  const { headers } = helpMapHeadersFromSheet(sheet);
-  const row = new Array(headers.length).fill('');
+  try {
+    const { headers } = helpMapHeadersFromSheet(sheet);
+    const row = new Array(headers.length).fill('');
 
-  const set = (name, value) => {
-    const idx = headers.indexOf(String(name).trim());
-    if (idx > -1) row[idx] = value;
-  };
+    const set = (name, value) => {
+      const idx = headers.indexOf(String(name).trim());
+      if (idx > -1) row[idx] = value;
+    };
 
-  set('เลขที่', sequenceNumber);
-  set('วันที่', now); // Date object
-  set('ชื่อผู้แจ้งซ่อม', (formData && formData.requesterName) ? String(formData.requesterName) : '');
-  set('เบอร์โทร', (typeof helpNormalizePhone === 'function') ? helpNormalizePhone((formData && formData.phoneNumber) ? String(formData.phoneNumber) : '') : ((formData && formData.phoneNumber) ? String(formData.phoneNumber) : ''));
-  set('ประเภทงานซ่อม', (formData && formData.repairType) ? String(formData.repairType) : 'ทั่วไป');
-  set('รายการแจ้งซ่อม', (formData && formData.repairItem) ? String(formData.repairItem) : '');
-  set('อาการ', (formData && formData.description) ? String(formData.description) : '');
-  set('สถานที่', (formData && formData.location) ? String(formData.location) : '');
-  set('สถานะ', 'รอดำเนินการ');
+    set('เลขที่', sequenceNumber);
+    set('วันที่', now); // Date object
+    set('ชื่อผู้แจ้งซ่อม', (formData && formData.requesterName) ? String(formData.requesterName) : '');
+    set('เบอร์โทร', (typeof helpNormalizePhone === 'function') ? helpNormalizePhone((formData && formData.phoneNumber) ? String(formData.phoneNumber) : '') : ((formData && formData.phoneNumber) ? String(formData.phoneNumber) : ''));
+    set('ประเภทงานซ่อม', (formData && formData.repairType) ? String(formData.repairType) : 'ทั่วไป');
+    set('รายการแจ้งซ่อม', (formData && formData.repairItem) ? String(formData.repairItem) : '');
+    set('อาการ', (formData && formData.description) ? String(formData.description) : '');
+    set('สถานที่', (formData && formData.location) ? String(formData.location) : '');
+    set('สถานะ', STATUS.PENDING);
 
-  // CHANGE: ค่าเริ่มต้นของ “วันที่อัปเดตสถานะ/วันที่เสร็จสิ้น” ให้เป็นค่าว่าง (แต่เป็นคอลัมน์ DateTime แล้ว)
-  set('วันที่อัปเดตสถานะ', '');
-  set('วันที่เสร็จสิ้น', '');
+    // CHANGE: ค่าเริ่มต้นของ “วันที่อัปเดตสถานะ/วันที่เสร็จสิ้น” ให้เป็นค่าว่าง (แต่เป็นคอลัมน์ DateTime แล้ว)
+    set('วันที่อัปเดตสถานะ', '');
+    set('วันที่เสร็จสิ้น', '');
 
-  set('รหัสเอกสาร', '');
-  set('ลิงก์เอกสาร', '');
-  set('ความเร่งด่วน', (formData && formData.priority) ? String(formData.priority) : 'ปานกลาง');
-  set('หมายเหตุ', '');
-  set('ผู้รับผิดชอบ', '');
-  set('URL รูปภาพประกอบ', '[]');
+    set('รหัสเอกสาร', '');
+    set('ลิงก์เอกสาร', '');
+    set('ความเร่งด่วน', (formData && formData.priority) ? String(formData.priority) : PRIORITY.MEDIUM);
+    set('หมายเหตุ', '');
+    set('ผู้รับผิดชอบ', '');
+    set('URL รูปภาพประกอบ', '[]');
 
-  // รองรับคอลัมน์ “วันที่รับงาน” (ถ้ามี)
-  set('วันที่รับงาน', '');
+    // รองรับคอลัมน์ “วันที่รับงาน” (ถ้ามี)
+    set('วันที่รับงาน', '');
 
-  sheet.appendRow(row);
-  SpreadsheetApp.flush();
+    sheet.appendRow(row);
+    SpreadsheetApp.flush();
 
-  // CHANGE: หา rowIndex กลับมา (ไว้ใช้ต่อ/ไว้ทดสอบ)
-  const rowIndex = helpFindRowBySequence(sheet, sequenceNumber);
+    // CHANGE: หา rowIndex กลับมา (ไว้ใช้ต่อ/ไว้ทดสอบ)
+    const rowIndex = helpFindRowBySequence(sheet, sequenceNumber);
 
-  return {
-    sequenceNumber: sequenceNumber,
-    currentDateTime: now,
-    rowIndex: rowIndex
-  };
+    return {
+      sequenceNumber: sequenceNumber,
+      currentDateTime: now,
+      rowIndex: rowIndex
+    };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 
@@ -369,36 +627,42 @@ function saveToSheetPendingPdf(formData, docId, docUrl, imageUrls = []) {
   const createdAt = (formData && formData.currentDateTime instanceof Date && !isNaN(formData.currentDateTime.getTime()))
     ? formData.currentDateTime
     : new Date();
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
 
-  set('เลขที่', seq);
-  set('วันที่', createdAt); // Date object
-  set('ชื่อผู้แจ้งซ่อม', (formData && formData.requesterName) ? String(formData.requesterName) : '');
-  set('เบอร์โทร', (typeof helpNormalizePhone === 'function') ? helpNormalizePhone((formData && formData.phoneNumber) ? String(formData.phoneNumber) : '') : ((formData && formData.phoneNumber) ? String(formData.phoneNumber) : ''));
-  set('ประเภทงานซ่อม', (formData && formData.repairType) ? String(formData.repairType) : 'ทั่วไป');
-  set('รายการแจ้งซ่อม', (formData && formData.repairItem) ? String(formData.repairItem) : '');
-  set('อาการ', (formData && formData.description) ? String(formData.description) : '');
-  set('สถานที่', (formData && formData.location) ? String(formData.location) : '');
-  set('สถานะ', 'รอดำเนินการ');
+  try {
+    set('เลขที่', seq);
+    set('วันที่', createdAt); // Date object
+    set('ชื่อผู้แจ้งซ่อม', (formData && formData.requesterName) ? String(formData.requesterName) : '');
+    set('เบอร์โทร', (typeof helpNormalizePhone === 'function') ? helpNormalizePhone((formData && formData.phoneNumber) ? String(formData.phoneNumber) : '') : ((formData && formData.phoneNumber) ? String(formData.phoneNumber) : ''));
+    set('ประเภทงานซ่อม', (formData && formData.repairType) ? String(formData.repairType) : 'ทั่วไป');
+    set('รายการแจ้งซ่อม', (formData && formData.repairItem) ? String(formData.repairItem) : '');
+    set('อาการ', (formData && formData.description) ? String(formData.description) : '');
+    set('สถานที่', (formData && formData.location) ? String(formData.location) : '');
+    set('สถานะ', STATUS.PENDING);
 
-  // CHANGE: เริ่มว่าง แต่คอลัมน์เป็น DateTime แล้ว
-  set('วันที่อัปเดตสถานะ', '');
-  set('วันที่เสร็จสิ้น', '');
+    // CHANGE: เริ่มว่าง แต่คอลัมน์เป็น DateTime แล้ว
+    set('วันที่อัปเดตสถานะ', '');
+    set('วันที่เสร็จสิ้น', '');
 
-  set('รหัสเอกสาร', docId || '');
-  set('ลิงก์เอกสาร', docUrl || '');
-  set('ความเร่งด่วน', (formData && formData.priority) ? String(formData.priority) : 'ปานกลาง');
-  set('หมายเหตุ', '');
-  set('ผู้รับผิดชอบ', '');
-  set('URL รูปภาพประกอบ', JSON.stringify(imageUrls || []));
+    set('รหัสเอกสาร', docId || '');
+    set('ลิงก์เอกสาร', docUrl || '');
+    set('ความเร่งด่วน', (formData && formData.priority) ? String(formData.priority) : PRIORITY.MEDIUM);
+    set('หมายเหตุ', '');
+    set('ผู้รับผิดชอบ', '');
+    set('URL รูปภาพประกอบ', JSON.stringify(imageUrls || []));
 
-  set('วันที่รับงาน', '');
+    set('วันที่รับงาน', '');
 
-  sheet.appendRow(row);
-  SpreadsheetApp.flush();
+    sheet.appendRow(row);
+    SpreadsheetApp.flush();
 
-  const rowIndex = helpFindRowBySequence(sheet, seq);
+    const rowIndex = helpFindRowBySequence(sheet, seq);
 
-  return { success: true, rowIndex: rowIndex };
+    return { success: true, rowIndex: rowIndex };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 
@@ -563,10 +827,11 @@ function uploadImages(imageFiles, sequenceNumber) {
 /**
  * ลบไฟล์รูปภาพที่เกี่ยวข้อง
  */
-function deleteImages(imageUrls = []) {
-  imageUrls.forEach(url => {
+function deleteImages(imageRefs = []) {
+  const refs = Array.isArray(imageRefs) ? imageRefs : [imageRefs];
+  refs.forEach(ref => {
     try {
-      const fileId = extractFileIdFromUrl(url);
+      const fileId = extractFileIdFromUrl(ref);
       if (fileId) DriveApp.getFileById(fileId).setTrashed(true);
     } catch (e) {
       Logger.log('Error deleting image: ' + e.message);
@@ -677,13 +942,242 @@ function debugImageData() {
 /**
  * จัดการการ Login
  */
+function hashPasswordSha256_(password) {
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(password || ''), Utilities.Charset.UTF_8)
+    .map(function(b) { return ('0' + (b < 0 ? b + 256 : b).toString(16)).slice(-2); })
+    .join('');
+}
+
+function isPasswordMatch_(storedPassword, inputPassword) {
+  const stored = String(storedPassword || '').trim();
+  if (!stored) return false;
+
+  const input = String(inputPassword || '');
+  const inputHash = hashPasswordSha256_(input);
+  if (/^[a-f0-9]{64}$/i.test(stored)) {
+    return stored.toLowerCase() === inputHash;
+  }
+
+  return stored === input;
+}
+
+function migrateUserPasswordsToSha256(dryRun) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+
+  try {
+    const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+    const userSheet = ss.getSheetByName(CONFIG.USER_SHEET_NAME);
+    if (!userSheet) throw new Error('User sheet not found');
+
+    const lastRow = userSheet.getLastRow();
+    if (lastRow < 2) {
+      return { success: true, dryRun: !!dryRun, migrated: 0, skippedHash: 0, skippedBlank: 0 };
+    }
+
+    const passwordRange = userSheet.getRange(2, 2, lastRow - 1, 1);
+    const values = passwordRange.getValues();
+    let migrated = 0;
+    let skippedHash = 0;
+    let skippedBlank = 0;
+
+    const nextValues = values.map(function(row) {
+      const stored = String(row[0] || '').trim();
+      if (!stored) {
+        skippedBlank++;
+        return [row[0]];
+      }
+      if (/^[a-f0-9]{64}$/i.test(stored)) {
+        skippedHash++;
+        return [stored.toLowerCase()];
+      }
+      migrated++;
+      return [hashPasswordSha256_(stored)];
+    });
+
+    if (!dryRun && migrated > 0) {
+      const backupName = CONFIG.USER_SHEET_NAME + '_backup_passwords_' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd_HHmmss');
+      const backupSheet = userSheet.copyTo(ss).setName(backupName);
+      ss.setActiveSheet(backupSheet);
+      ss.moveActiveSheet(ss.getNumSheets());
+      passwordRange.setValues(nextValues);
+      SpreadsheetApp.flush();
+    }
+
+    return { success: true, dryRun: !!dryRun, migrated: migrated, skippedHash: skippedHash, skippedBlank: skippedBlank };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function setUserPasswordSha256(username, newPassword) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+
+  try {
+    const inputUsername = String(username || '').trim();
+    const inputPassword = String(newPassword || '');
+    if (!inputUsername || !inputPassword) {
+      return { success: false, error: 'กรุณาระบุ username และ password' };
+    }
+
+    const userSheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).getSheetByName(CONFIG.USER_SHEET_NAME);
+    if (!userSheet) throw new Error('User sheet not found');
+
+    const values = userSheet.getDataRange().getValues();
+    const headers = values[0].map(function(h) { return String(h || '').trim().toLowerCase(); });
+    const usernameCol = headers.indexOf('username');
+    const passwordCol = headers.indexOf('password');
+    if (usernameCol < 0 || passwordCol < 0) {
+      throw new Error('Missing required users headers: username/password');
+    }
+
+    for (let i = 1; i < values.length; i++) {
+      if (String(values[i][usernameCol] || '').trim().toLowerCase() === inputUsername.toLowerCase()) {
+        userSheet.getRange(i + 1, passwordCol + 1).setValue(hashPasswordSha256_(inputPassword));
+        SpreadsheetApp.flush();
+        return { success: true };
+      }
+    }
+
+    return { success: false, error: 'User not found' };
+  } catch (error) {
+    Logger.log('setUserPasswordSha256 error: ' + error.stack);
+    return { success: false, error: error.message };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function generateTemporaryPassword_() {
+  return Utilities.getUuid().replace(/-/g, '').slice(0, 10);
+}
+
+function getPasswordResetErrorMessage_(error) {
+  const message = String((error && error.message) || error || '');
+  if (/authorization|authorize|permission|scope/i.test(message)) {
+    return 'ยังไม่ได้อนุญาตสิทธิ์ส่งอีเมล กรุณาให้เจ้าของ Script รัน selfTestPasswordResetEmail() แล้วกด authorize';
+  }
+  if (/too many|quota|limit/i.test(message)) {
+    return 'ส่งอีเมลไม่สำเร็จ เนื่องจากเกิน quota ของบัญชี Google';
+  }
+  if (/Missing required users headers/i.test(message)) {
+    return 'ไม่พบคอลัมน์ที่จำเป็นในชีต users: username/password/email';
+  }
+  return 'ส่งอีเมลรีเซ็ตรหัสผ่านไม่สำเร็จ: ' + message;
+}
+
+function selfTestPasswordResetEmail(email) {
+  const targetEmail = String(email || '').trim();
+  if (!targetEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail)) {
+    throw new Error('กรุณาระบุ email สำหรับทดสอบ');
+  }
+
+  MailApp.sendEmail({
+    to: targetEmail,
+    subject: 'ทดสอบส่งอีเมลระบบแจ้งซ่อม',
+    body: 'ระบบแจ้งซ่อมทดสอบส่งอีเมลสำเร็จ'
+  });
+
+  return { success: true, email: targetEmail };
+}
+
+function testSendResetEmail() {
+  return selfTestPasswordResetEmail('sdulpcar@gmail.com');
+}
+
+function requestPasswordReset(username, email) {
+  const genericMessage = 'หากข้อมูลถูกต้อง ระบบจะส่งรหัสผ่านใหม่ไปยังอีเมลที่ลงทะเบียนไว้';
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+
+  try {
+    const inputUsername = String(username || '').trim();
+    const inputEmail = String(email || '').trim().toLowerCase();
+    if (!inputUsername || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputEmail)) {
+      return { success: true, message: genericMessage };
+    }
+
+    const userSheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).getSheetByName(CONFIG.USER_SHEET_NAME);
+    if (!userSheet) throw new Error('User sheet not found');
+
+    const values = userSheet.getDataRange().getValues();
+    if (values.length < 2) {
+      return { success: true, message: genericMessage };
+    }
+
+    const headers = values[0].map(function(h) { return String(h || '').trim().toLowerCase(); });
+    const usernameCol = headers.indexOf('username');
+    const passwordCol = headers.indexOf('password');
+    let emailCol = headers.indexOf('email');
+    if (emailCol < 0) emailCol = headers.indexOf('e-mail');
+    if (emailCol < 0) emailCol = headers.indexOf('อีเมล');
+    if (emailCol < 0) emailCol = headers.indexOf('อีเมล์');
+    const activeCol = headers.indexOf('active');
+    const nameCol = headers.indexOf('name');
+    if (usernameCol < 0 || passwordCol < 0 || emailCol < 0) {
+      throw new Error('Missing required users headers: username/password/email');
+    }
+
+    const cache = CacheService.getScriptCache();
+    const throttleKey = 'pwdreset:' + Utilities.base64EncodeWebSafe(
+      Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, inputUsername.toLowerCase() + '|' + inputEmail, Utilities.Charset.UTF_8)
+    ).slice(0, 80);
+    let sent = false;
+
+    for (let i = 1; i < values.length; i++) {
+      const row = values[i];
+      const rowUsername = String(row[usernameCol] || '').trim();
+      const rowEmail = String(row[emailCol] || '').trim().toLowerCase();
+      const isActive = activeCol < 0 || String(row[activeCol]).trim() === '1';
+      if (rowUsername.toLowerCase() === inputUsername.toLowerCase() && rowEmail === inputEmail && isActive) {
+        if (cache.get(throttleKey)) {
+          Logger.log('Password reset throttled for username=' + inputUsername);
+          return { success: true, message: genericMessage };
+        }
+
+        const temporaryPassword = generateTemporaryPassword_();
+        const displayName = nameCol >= 0 ? String(row[nameCol] || rowUsername).trim() : rowUsername;
+        MailApp.sendEmail({
+          to: rowEmail,
+          subject: 'รีเซ็ตรหัสผ่านระบบแจ้งซ่อม',
+          body:
+            'เรียน ' + displayName + '\n\n' +
+            'ระบบได้สร้างรหัสผ่านใหม่สำหรับบัญชี ' + rowUsername + '\n\n' +
+            'รหัสผ่านชั่วคราว: ' + temporaryPassword + '\n\n' +
+            'กรุณาเข้าสู่ระบบแล้วเปลี่ยนรหัสผ่านตามขั้นตอนของผู้ดูแลระบบ\n' +
+            'หากไม่ได้ร้องขอรายการนี้ กรุณาติดต่อผู้ดูแลระบบทันที'
+        });
+
+        userSheet.getRange(i + 1, passwordCol + 1).setValue(hashPasswordSha256_(temporaryPassword));
+        SpreadsheetApp.flush();
+        cache.put(throttleKey, '1', 300);
+        Logger.log('Password reset email sent to ' + rowEmail + ' for username=' + rowUsername);
+        sent = true;
+        break;
+      }
+    }
+
+    if (!sent) {
+      Logger.log('Password reset request completed without account match for username=' + inputUsername);
+    }
+
+    return { success: true, message: genericMessage };
+  } catch (error) {
+    Logger.log('Password reset error: ' + error.stack);
+    return { success: false, message: getPasswordResetErrorMessage_(error) };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function doLogin(username, password) {
   try {
     const userSheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).getSheetByName(CONFIG.USER_SHEET_NAME);
     if (!userSheet) throw new Error('User sheet not found');
     
     const userData = userSheet.getDataRange().getValues();
-    const user = userData.find(row => row[0] === username && row[1] === password);
+    const user = userData.find(row => row[0] === username && isPasswordMatch_(row[1], password));
 
     if (!user) {
       return { success: false, message: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' };
@@ -803,6 +1297,7 @@ function getPublicRepairData() {
       prio: getIdx('ความเร่งด่วน'),
       tech: getIdx('ผู้รับผิดชอบ'),
       phone: getIdx('เบอร์'),
+      type: headers.findIndex(h => h.includes('\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e07\u0e32\u0e19\u0e0b\u0e48\u0e2d\u0e21') || h.includes('\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e07\u0e32\u0e19')),
       img: headers.findIndex(h => h.includes('รูป') || h.includes('img'))
     };
 
@@ -1050,6 +1545,83 @@ function getDashboardData() {
   }
 }
 
+function normalizeStatusName_(input) {
+  const s = String(input || '').trim();
+  if (!s) return '';
+  if (s === STATUS.PARTS_ALT) return STATUS.PARTS;
+  return s;
+}
+
+function normalizePriorityName_(input) {
+  const p = String(input || '').trim();
+  if (!p) return '';
+  return p;
+}
+
+function assertEqual_(actual, expected, label) {
+  if (actual !== expected) {
+    throw new Error((label || 'Assertion failed') + ': expected ' + expected + ' but got ' + actual);
+  }
+}
+
+function assertTruthy_(value, label) {
+  if (!value) {
+    throw new Error((label || 'Assertion failed') + ': expected truthy value');
+  }
+}
+
+function runHelperUnitTests() {
+  const results = [];
+  const push = (name, fn) => {
+    try {
+      fn();
+      results.push({ name: name, ok: true });
+    } catch (e) {
+      results.push({ name: name, ok: false, error: e.message });
+    }
+  };
+
+  push('normalizeStatusName_ maps alternate parts status', function() {
+    assertEqual_(normalizeStatusName_('รอเบิกพัดสุ'), STATUS.PARTS, 'status alias');
+  });
+
+  push('normalizeStatusName_ preserves canonical status', function() {
+    assertEqual_(normalizeStatusName_(STATUS.COMPLETED), STATUS.COMPLETED, 'canonical status');
+  });
+
+  push('normalizePriorityName_ trims text', function() {
+    assertEqual_(normalizePriorityName_('  เร่งด่วน  '), PRIORITY.URGENT, 'priority trim');
+  });
+
+  push('helpParseDateSynced parses BE date string', function() {
+    const parsed = helpParseDateSynced(null, '12/09/2568 09:30');
+    assertTruthy_(parsed instanceof Date, 'parsed date');
+    assertEqual_(parsed.getFullYear(), 2025, 'parsed year');
+  });
+
+  push('parseReportDateTime returns time flag', function() {
+    const parsed = parseReportDateTime(null, '12/09/2568 09:30');
+    assertTruthy_(parsed.date instanceof Date, 'report date');
+    assertEqual_(parsed.hasTime, true, 'time flag');
+  });
+
+  return {
+    success: true,
+    total: results.length,
+    passed: results.filter(function(r) { return r.ok; }).length,
+    failed: results.filter(function(r) { return !r.ok; }),
+    results: results
+  };
+}
+
+function requireMutationRole_(currentUser, actionLabel) {
+  const role = String((currentUser && currentUser.role) || '').trim().toLowerCase();
+  if (role !== ROLES.ADMIN && role !== ROLES.TECHNICIAN) {
+    throw new Error(actionLabel ? `คุณไม่มีสิทธิ์ในการ${actionLabel}` : 'คุณไม่มีสิทธิ์ดำเนินการนี้');
+  }
+  return role;
+}
+
 function updateRepairStatus(payload, newStatus, technician, notes, currentUser, base64Images) {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) {
@@ -1059,11 +1631,11 @@ function updateRepairStatus(payload, newStatus, technician, notes, currentUser, 
   try {
     const tz = (CONFIG && CONFIG.TIMEZONE) ? CONFIG.TIMEZONE : 'Asia/Bangkok';
 
-    function normalizeStatusName(input) {
-      const s = String(input || '').trim();
-      if (!s) return '';
-      if (s === 'รอเบิกพัดสุ') return 'พัสดุอยู่ระหว่างรอเบิก';
-      return s;
+    try {
+      const sheetInstance = getSheetInstance();
+      helpEnsureDateTimeColumns(sheetInstance, ['วันที่อัปเดตสถานะ', 'วันที่เสร็จสิ้น', 'วันที่รับงาน']);
+    } catch (e) {
+      Logger.log('WARN: Could not ensure date columns: ' + e.message);
     }
 
     try {
@@ -1100,22 +1672,24 @@ function updateRepairStatus(payload, newStatus, technician, notes, currentUser, 
     if (base64Images) p.base64Images = base64Images;
 
     const seq = String(p.sequenceNumber || p.seq || p.sequence || p.no || '').trim();
-    const status = normalizeStatusName(p.newStatus || p.status || p.state || '');
+    const status = normalizeStatusName_(p.newStatus || p.status || p.state || '');
     const tech = String(p.technician || p.tech || p.assignee || '').trim();
     const noteContent = String(p.notes || p.note || '').trim();
     const userObj = p.currentUser || p.user || {};
     const images = Array.isArray(p.base64Images || p.images) ? (p.base64Images || p.images) : [];
 
+    requireMutationRole_(userObj, 'แก้ไขสถานะรายการ');
+
     if (!seq) throw new Error('ไม่พบเลขที่ใบแจ้งซ่อม (sequenceNumber Missing)');
     if (!status) throw new Error('ไม่พบสถานะใหม่ (newStatus Missing)');
 
     const allowedStatuses = [
-      'รอดำเนินการ',
-      'กำลังดำเนินการ',
-      'ดำเนินการภายนอก',
-      'พัสดุอยู่ระหว่างรอเบิก',
-      'เสร็จสิ้น',
-      'ยกเลิก'
+      STATUS.PENDING,
+      STATUS.PROCESSING,
+      STATUS.EXTERNAL,
+      STATUS.PARTS,
+      STATUS.COMPLETED,
+      STATUS.CANCELLED
     ];
     if (allowedStatuses.indexOf(status) === -1) {
       throw new Error('สถานะไม่ถูกต้อง: ' + status);
@@ -1163,7 +1737,7 @@ function updateRepairStatus(payload, newStatus, technician, notes, currentUser, 
       sheet.getRange(rowIndex, colNote).setValue(finalNote);
     }
 
-    if (colAccept && (status === 'กำลังดำเนินการ' || status === 'ดำเนินการภายนอก')) {
+    if (colAccept && (status === STATUS.PROCESSING || status === STATUS.EXTERNAL)) {
       const curVal = sheet.getRange(rowIndex, colAccept).getValue();
       if (!(curVal instanceof Date) || isNaN(curVal.getTime())) {
         sheet.getRange(rowIndex, colAccept).setValue(actionDate);
@@ -1171,15 +1745,17 @@ function updateRepairStatus(payload, newStatus, technician, notes, currentUser, 
     }
 
     if (colDone) {
-      if (status === 'เสร็จสิ้น') {
+      if (status === STATUS.COMPLETED) {
         sheet.getRange(rowIndex, colDone).setValue(actionDate);
       } else {
         sheet.getRange(rowIndex, colDone).clearContent();
       }
     }
 
+    let latestStatusImageUrls = [];
     if (colImg && images.length > 0) {
       const newImageIds = uploadImages(images, seq);
+      latestStatusImageUrls = Array.isArray(newImageIds) ? newImageIds : [];
       const oldImgJson = sheet.getRange(rowIndex, colImg).getValue();
       let imgArr = [];
 
@@ -1190,9 +1766,11 @@ function updateRepairStatus(payload, newStatus, technician, notes, currentUser, 
         imgArr = [];
       }
 
-      const finalImgArr = imgArr.concat(newImageIds);
+      const finalImgArr = imgArr.concat(latestStatusImageUrls);
       sheet.getRange(rowIndex, colImg).setValue(JSON.stringify(finalImgArr));
     }
+
+    appendStatusLog_(seq, status, noteContent, userObj, latestStatusImageUrls);
 
     SpreadsheetApp.flush();
 
@@ -1206,7 +1784,7 @@ function updateRepairStatus(payload, newStatus, technician, notes, currentUser, 
       const fullRowData = sheet.getRange(rowIndex, 1, 1, sheet.getLastColumn()).getValues()[0];
       const headersArr = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
       if (typeof sendStatusUpdateNotification === 'function') {
-        sendStatusUpdateNotification(fullRowData, headersArr, status, tech, noteContent, userObj);
+        sendStatusUpdateNotification(fullRowData, headersArr, status, tech, noteContent, userObj, latestStatusImageUrls);
       }
     } catch (notiErr) {
       Logger.log('Notification Error: ' + notiErr.message);
@@ -1217,7 +1795,7 @@ function updateRepairStatus(payload, newStatus, technician, notes, currentUser, 
       sequenceNumber: seq,
       newStatus: status,
       technician: tech,
-      updatedAt: actionDate,
+      updatedAt: actionDate ? actionDate.toISOString() : null,
       notes: noteContent
     };
 
@@ -1229,6 +1807,140 @@ function updateRepairStatus(payload, newStatus, technician, notes, currentUser, 
   }
 }
 
+function selfTestUpdateRepairStatusPayloadAuth_() {
+  const payload = {
+    sequenceNumber: 'SDUL-TEST-AUTH',
+    newStatus: STATUS.PROCESSING,
+    technician: 'ช่างทดสอบ',
+    currentUser: { role: ROLES.ADMIN, name: 'Admin Test' }
+  };
+
+  requireMutationRole_(payload.currentUser, 'แก้ไขสถานะรายการ');
+
+  let denied = false;
+  try {
+    requireMutationRole_({}, 'แก้ไขสถานะรายการ');
+  } catch (e) {
+    denied = /ไม่มีสิทธิ์/.test(String(e && e.message));
+  }
+
+  if (!denied) {
+    throw new Error('selfTestUpdateRepairStatusPayloadAuth_ failed: missing user must be denied');
+  }
+
+  return { success: true, message: 'updateRepairStatus payload auth ok' };
+}
+
+function selfTestStatusUpdateLatestImageScope_() {
+  const existingJobImages = ['old-image-1', 'old-image-2'];
+  const latestStatusImageUrls = ['new-image-1'];
+  const allJobImages = existingJobImages.concat(latestStatusImageUrls);
+  const telegramImages = Array.isArray(latestStatusImageUrls) ? latestStatusImageUrls : [];
+
+  if (allJobImages.length !== 3) {
+    throw new Error('selfTestStatusUpdateLatestImageScope_ failed: all job images changed');
+  }
+  if (telegramImages.length !== 1 || telegramImages[0] !== 'new-image-1') {
+    throw new Error('selfTestStatusUpdateLatestImageScope_ failed: telegram must use latest images only');
+  }
+
+  const emptyLatestStatusImageUrls = [];
+  const noNewTelegramImages = Array.isArray(emptyLatestStatusImageUrls) ? emptyLatestStatusImageUrls : [];
+  if (noNewTelegramImages.length !== 0) {
+    throw new Error('selfTestStatusUpdateLatestImageScope_ failed: empty latest images must send text only');
+  }
+
+  return { success: true, message: 'status update latest image scope ok' };
+}
+
+function selfTestStatusLogReportMapping_() {
+  const values = [
+    ['วันที่บันทึก', 'เลขที่', 'สถานะ', 'หมายเหตุ', 'ผู้บันทึก', 'รูปภาพ'],
+    [new Date(2026, 0, 1, 9, 0), 'SDUL-TEST-LOG', STATUS.PROCESSING, 'รับงาน', 'Admin Test', '1234567890123456789012345'],
+    [new Date(2026, 0, 1, 10, 0), 'SDUL-TEST-LOG', STATUS.COMPLETED, 'เสร็จแล้ว', 'Admin Test', '1234567890123456789012346'],
+    [new Date(2026, 0, 1, 11, 0), 'SDUL-OTHER', STATUS.CANCELLED, 'ยกเลิก', 'Admin Test', '']
+  ];
+
+  const logs = getStatusLogsBySequence('SDUL-TEST-LOG', values);
+  if (logs.length !== 2) {
+    throw new Error('selfTestStatusLogReportMapping_ failed: expected 2 logs actual=' + logs.length);
+  }
+  if (logs[0].status !== STATUS.PROCESSING || logs[1].status !== STATUS.COMPLETED) {
+    throw new Error('selfTestStatusLogReportMapping_ failed: status order invalid');
+  }
+  if (!logs[0].imageIds || logs[0].imageIds[0] !== '1234567890123456789012345') {
+    throw new Error('selfTestStatusLogReportMapping_ failed: image id invalid');
+  }
+
+  const logMap = buildStatusLogMap_(values);
+  if (!logMap['SDUL-TEST-LOG'] || logMap['SDUL-TEST-LOG'].length !== 2) {
+    throw new Error('selfTestStatusLogReportMapping_ failed: log map invalid');
+  }
+
+  const oldLogs = getStatusLogsBySequence('SDUL-NO-LOG', values);
+  if (oldLogs.length !== 0) {
+    throw new Error('selfTestStatusLogReportMapping_ failed: old record fallback must be handled by report row');
+  }
+
+  const fallbackLogs = getStatusLogsBySequence('SDUL-NO-LOG', { status: STATUS.PENDING }, values);
+  if (fallbackLogs.length !== 1 || fallbackLogs[0].status !== STATUS.PENDING) {
+    throw new Error('selfTestStatusLogReportMapping_ failed: fallback row invalid');
+  }
+
+  return { success: true, message: 'status log report mapping ok' };
+}
+
+function selfTestReportStatusHeaderMapping_() {
+  const headers = ['เลขที่', 'สถานะล่าสุด', 'สถานะ'];
+  const idx = function(name) { return headers.indexOf(name); };
+  const idxAny = function(names) {
+    for (let i = 0; i < names.length; i++) {
+      const found = idx(names[i]);
+      if (found > -1) return found;
+    }
+    return -1;
+  };
+
+  const statusIdx = idxAny(['สถานะล่าสุด', 'สถานะ']);
+  if (statusIdx !== 1) {
+    throw new Error('selfTestReportStatusHeaderMapping_ failed: expected สถานะล่าสุด index=1 actual=' + statusIdx);
+  }
+
+  return { success: true, message: 'report status header mapping ok' };
+}
+
+function selfTestStatusHistoryLayoutEstimate_() {
+  const pageLimit = 480;
+  const rows = [
+    { data: ['01/01/2569', 'กำลังดำเนินการ', '-', 'Admin', ''], imgIds: [] },
+    { data: ['01/01/2569', 'เสร็จสิ้น', 'หมายเหตุยาว'.repeat(20), 'Admin', ''], imgIds: ['img1'] },
+    { data: ['01/01/2569', 'ยกเลิก', '-', 'Admin', ''], imgIds: [] }
+  ];
+
+  let currentHeight = 35;
+  let pageBreaks = 0;
+  rows.forEach(function(row) {
+    const hasImage = row.imgIds && row.imgIds.length > 0;
+    let estimatedRowHeight = hasImage ? 145 : 55;
+    const maxTextLen = row.data.reduce(function(max, txt) {
+      return Math.max(max, String(txt).length);
+    }, 0);
+    if (maxTextLen > 80) estimatedRowHeight += 35;
+
+    if (currentHeight + estimatedRowHeight > pageLimit) {
+      pageBreaks++;
+      currentHeight = 55;
+    }
+    currentHeight += estimatedRowHeight;
+  });
+
+  if (pageBreaks < 0 || currentHeight <= 0) {
+    throw new Error('selfTestStatusHistoryLayoutEstimate_ failed');
+  }
+
+  return { success: true, message: 'status history layout estimate ok' };
+}
+
 
 
 /**
@@ -1236,35 +1948,39 @@ function updateRepairStatus(payload, newStatus, technician, notes, currentUser, 
  */
 function deleteRepair(sequenceNumber, userInfo) {
   try {
-    if (!userInfo || (userInfo.role !== 'admin' && userInfo.role !== 'technician')) {
-      return { success: false, error: 'คุณไม่มีสิทธิ์ในการลบรายการ' };
-    }
+    requireMutationRole_(userInfo, 'ลบรายการ');
 
     const sheet = getSheetInstance();
     const range = sheet.getDataRange();
     const values = range.getValues();
     const headers = values[0];
-    const sequenceIndex = headers.indexOf('เลขที่');
-    
-    const rowIndex = values.findIndex(row => row[sequenceIndex] === sequenceNumber);
-    if (rowIndex === -1) {
+    const { map } = helpMapHeadersFromSheet(sheet);
+
+    const rowIndex = helpFindRowBySequence(sheet, sequenceNumber);
+    if (!rowIndex || rowIndex < 2) {
       return { success: false, error: 'ไม่พบรายการที่ต้องการลบ' };
     }
 
-    const rowToDelete = values[rowIndex];
-    const docId = rowToDelete[headers.indexOf('รหัสเอกสาร')];
-    const imageUrlsData = rowToDelete[headers.indexOf('URL รูปภาพประกอบ')];
+    const rowToDelete = values[rowIndex - 1];
+    const docId = map['รหัสเอกสาร'] ? rowToDelete[map['รหัสเอกสาร'] - 1] : '';
+    const imageUrlsData = map['URL รูปภาพประกอบ'] ? rowToDelete[map['URL รูปภาพประกอบ'] - 1] : '';
 
     if (docId) {
       try { DriveApp.getFileById(docId).setTrashed(true); } catch (e) { Logger.log('Could not delete document: ' + docId); }
     }
     if (imageUrlsData) {
-      const imageUrls = JSON.parse(imageUrlsData || '[]');
+      let imageUrls = [];
+      try {
+        imageUrls = JSON.parse(imageUrlsData || '[]');
+      } catch (e) {
+        imageUrls = String(imageUrlsData).split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+      }
       deleteImages(imageUrls);
     }
 
-    sheet.deleteRow(rowIndex + 1);
+    sheet.deleteRow(rowIndex);
     SpreadsheetApp.flush();
+    try { CacheService.getScriptCache().remove('dashboard:data:v3'); } catch(e) {}
 
     return { success: true, message: 'ลบรายการเรียบร้อยแล้ว' };
   } catch (error) {
@@ -1284,14 +2000,8 @@ function generateChartData(data) {
     technicianStats: {}
   };
 
-  const normalizeStatusName = (input) => {
-    const s = String(input || '').trim();
-    if (s === 'รอเบิกพัดสุ') return 'พัสดุอยู่ระหว่างรอเบิก';
-    return s;
-  };
-
   data.forEach(item => {
-    const status = normalizeStatusName(item.status);
+    const status = normalizeStatusName_(item.status);
     const typeMap = {
       'ทั่วไป': 'general',
       'ไฟฟ้า': 'electrical',
@@ -1301,12 +2011,12 @@ function generateChartData(data) {
       'เครื่องใช้ไฟฟ้า': 'appliance'
     };
 
-    if (status === 'รอดำเนินการ') stats.statusCount.pending++;
-    else if (status === 'กำลังดำเนินการ') stats.statusCount.processing++;
-    else if (status === 'ดำเนินการภายนอก') stats.statusCount.external++;
-    else if (status === 'พัสดุอยู่ระหว่างรอเบิก') stats.statusCount.parts++;
-    else if (status === 'เสร็จสิ้น') stats.statusCount.completed++;
-    else if (status === 'ยกเลิก') stats.statusCount.cancelled++;
+    if (status === STATUS.PENDING) stats.statusCount.pending++;
+    else if (status === STATUS.PROCESSING) stats.statusCount.processing++;
+    else if (status === STATUS.EXTERNAL) stats.statusCount.external++;
+    else if (status === STATUS.PARTS) stats.statusCount.parts++;
+    else if (status === STATUS.COMPLETED) stats.statusCount.completed++;
+    else if (status === STATUS.CANCELLED) stats.statusCount.cancelled++;
 
     stats.repairTypeCount[typeMap[item.repairType] || 'other']++;
 
@@ -1327,12 +2037,12 @@ function generateChartData(data) {
 
       stats.technicianStats[tech].total++;
 
-      if (status === 'รอดำเนินการ') stats.technicianStats[tech].pending++;
-      else if (status === 'กำลังดำเนินการ') stats.technicianStats[tech].processing++;
-      else if (status === 'ดำเนินการภายนอก') stats.technicianStats[tech].external++;
-      else if (status === 'พัสดุอยู่ระหว่างรอเบิก') stats.technicianStats[tech].parts++;
-      else if (status === 'เสร็จสิ้น') stats.technicianStats[tech].completed++;
-      else if (status === 'ยกเลิก') stats.technicianStats[tech].cancelled++;
+      if (status === STATUS.PENDING) stats.technicianStats[tech].pending++;
+      else if (status === STATUS.PROCESSING) stats.technicianStats[tech].processing++;
+      else if (status === STATUS.EXTERNAL) stats.technicianStats[tech].external++;
+      else if (status === STATUS.PARTS) stats.technicianStats[tech].parts++;
+      else if (status === STATUS.COMPLETED) stats.technicianStats[tech].completed++;
+      else if (status === STATUS.CANCELLED) stats.technicianStats[tech].cancelled++;
     }
   });
 
@@ -1415,56 +2125,6 @@ function getAvailableReportMonths() {
 }
 
 
-// [ANCHOR: SERVER: TIME_HELPERS]
-// Helper: Parse Date/Time จาก raw(Date) หรือ display(string) ให้เป็น Date (AD) พร้อมเวลา
-function helpParseDateSynced(rawVal, dispVal) {
-  // CHANGE: ถ้า raw เป็น Date จริง ให้ใช้ raw เป็นหลัก (รักษาเวลา)
-  if (rawVal instanceof Date && !isNaN(rawVal.getTime())) {
-    const y = rawVal.getFullYear();
-    // กันเคสปีถูกเก็บเป็น BE ใน Date object (แปลกแต่เผื่อไว้ตามโค้ดเดิมของคุณ)
-    if (y > 2400) return new Date(y - 543, rawVal.getMonth(), rawVal.getDate(), rawVal.getHours(), rawVal.getMinutes());
-    return rawVal;
-  }
-
-  const str = String(dispVal || rawVal || '').trim();
-  if (!str || str === '-') return null;
-
-  // รองรับ dd/MM/yyyy หรือ d/M/yyyy หรือใช้ . - คั่น
-  const dateMatch = str.match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);
-  if (!dateMatch) return null;
-
-  let d = parseInt(dateMatch[1], 10);
-  let m = parseInt(dateMatch[2], 10) - 1;
-  let y = parseInt(dateMatch[3], 10);
-  if (y > 2400) y -= 543;
-
-  // time optional
-  let hr = 0, min = 0;
-  const timeMatch = str.match(/(\d{1,2})[:.](\d{2})/);
-  if (timeMatch) {
-    hr = parseInt(timeMatch[1], 10);
-    min = parseInt(timeMatch[2], 10);
-  }
-
-  return new Date(y, m, d, hr, min);
-}
-
-// Helper: ตรวจว่ามีเวลา "จริง" ไหม (ไม่ใช่ 00:00) โดยยึด GMT+7
-function helpHasTime(d) {
-  if (!(d instanceof Date) || isNaN(d.getTime())) return false;
-  const hh = parseInt(Utilities.formatDate(d, "GMT+7", "HH"), 10);
-  const mm = parseInt(Utilities.formatDate(d, "GMT+7", "mm"), 10);
-  return (hh !== 0 || mm !== 0);
-}
-
-// Helper: เช็ค midnight (00:00) โดยยึด GMT+7 เพื่อกันโชว์ 00:00 ใน PDF
-function helpIsMidnight(d) {
-  if (!(d instanceof Date) || isNaN(d.getTime())) return true;
-  const hh = parseInt(Utilities.formatDate(d, "GMT+7", "HH"), 10);
-  const mm = parseInt(Utilities.formatDate(d, "GMT+7", "mm"), 10);
-  return (hh === 0 && mm === 0);
-}
-
 function applyDocLandscapeA4(docId) {
   try {
     // CHANGE: ถ้าไม่ได้เปิด Advanced Docs API ให้แค่เตือนและไม่ล้มงาน
@@ -1485,10 +2145,10 @@ function applyDocLandscapeA4(docId) {
               height: { magnitude: 595.2756, unit: 'PT' }
             },
             // margin ถูกตั้งจาก DocumentApp แล้ว แต่ใส่ไว้ให้ Docs API สอดคล้อง (ถ้าระบบอนุญาต)
-            marginTop:    { magnitude: 36, unit: 'PT' },
-            marginBottom: { magnitude: 36, unit: 'PT' },
-            marginLeft:   { magnitude: 36, unit: 'PT' },
-            marginRight:  { magnitude: 36, unit: 'PT' }
+            marginTop:    { magnitude: 24, unit: 'PT' },
+            marginBottom: { magnitude: 24, unit: 'PT' },
+            marginLeft:   { magnitude: 24, unit: 'PT' },
+            marginRight:  { magnitude: 24, unit: 'PT' }
           },
           fields: 'pageSize,marginTop,marginBottom,marginLeft,marginRight'
         }
@@ -1558,11 +2218,11 @@ function sendNewRepairNotification(formData, docUrl, imageUrls = []) {
       ? `<a href="tel:${sanitizeHtml(phoneTel)}">${sanitizeHtml(phoneSafe)}</a>`
       : 'ไม่ระบุ';
 
-    const priority = String(formData['{{ความเร่งด่วน}}'] || 'ปานกลาง').trim();
+    const priority = normalizePriorityName_(formData['{{ความเร่งด่วน}}'] || PRIORITY.MEDIUM);
     let priorityIcon = '⚪';
-    if (priority === 'ฉุกเฉิน') priorityIcon = '🚨';
-    else if (priority === 'เร่งด่วน') priorityIcon = '🔴';
-    else if (priority === 'ปานกลาง') priorityIcon = '🟠';
+    if (priority === PRIORITY.EMERGENCY) priorityIcon = '🚨';
+    else if (priority === PRIORITY.URGENT) priorityIcon = '🔴';
+    else if (priority === PRIORITY.MEDIUM) priorityIcon = '🟠';
 
     let dateStr = sanitizeHtml(formData['{{วันที่}}'] || '');
     if (dateStr.includes(':') && !dateStr.includes('น.')) dateStr += ' น.';
@@ -1607,7 +2267,7 @@ function sendNewRepairNotification(formData, docUrl, imageUrls = []) {
 
 
 // [ANCHOR: SERVER: TELEGRAM_UPDATE_STATUS_V2]
-function sendStatusUpdateNotification(originalRowData, headers, newStatus, assignedTechnician, notes, userInfo) {
+function sendStatusUpdateNotification(originalRowData, headers, newStatus, assignedTechnician, notes, userInfo, latestStatusImageUrls) {
   try {
     const getVal = (name) => {
       const idx = headers.indexOf(name);
@@ -1635,22 +2295,22 @@ function sendStatusUpdateNotification(originalRowData, headers, newStatus, assig
 
     let title = '🔄 สถานะงาน : อัปเดต';
     let defaultNote = '';
-    if (currentStatus === 'รอดำเนินการ') {
+    if (currentStatus === STATUS.PENDING) {
       title = '⏳ สถานะงาน : รอดำเนินการ';
       defaultNote = 'ระบบรับเรื่องเรียบร้อย รอเจ้าหน้าที่ดำเนินการ';
-    } else if (currentStatus === 'กำลังดำเนินการ') {
+    } else if (currentStatus === STATUS.PROCESSING) {
       title = '⚙️ สถานะงาน : กำลังดำเนินการ';
       defaultNote = 'เจ้าหน้าที่อยู่ระหว่างดำเนินการ';
-    } else if (currentStatus === 'ดำเนินการภายนอก') {
+    } else if (currentStatus === STATUS.EXTERNAL) {
       title = '🏢 สถานะงาน : ดำเนินการโดยหน่วยงานภายนอก';
       defaultNote = 'ส่งต่อหน่วยงานภายนอกเพื่อดำเนินการ';
-    } else if (currentStatus === 'พัสดุอยู่ระหว่างรอเบิก') {
+    } else if (currentStatus === STATUS.PARTS) {
       title = '📦 สถานะงาน : รอเบิกอุปกรณ์';
       defaultNote = 'อยู่ระหว่างดำเนินการเบิกอุปกรณ์';
-    } else if (currentStatus === 'เสร็จสิ้น') {
+    } else if (currentStatus === STATUS.COMPLETED) {
       title = '✅ สถานะงาน : ดำเนินการเสร็จสิ้น';
       defaultNote = 'ดำเนินการเรียบร้อยแล้ว';
-    } else if (currentStatus === 'ยกเลิก') {
+    } else if (currentStatus === STATUS.CANCELLED) {
       title = '❌ สถานะงาน : ยกเลิก';
       defaultNote = 'ยกเลิกรายการแจ้งซ่อม';
     }
@@ -1673,7 +2333,9 @@ function sendStatusUpdateNotification(originalRowData, headers, newStatus, assig
       noteLine +
       `\n<i>ระบบแจ้งซ่อมออนไลน์</i>`;
 
-    sendTelegramNotification(message);
+    const imageUrls = Array.isArray(latestStatusImageUrls) ? latestStatusImageUrls : [];
+
+    sendTelegramNotification(message, imageUrls);
     Logger.log(`🔄 Sent status update notification for ${sequenceNumber}`);
   } catch (error) {
     Logger.log('❌ Error sending status update notification: ' + error.message);
@@ -1682,8 +2344,6 @@ function sendStatusUpdateNotification(originalRowData, headers, newStatus, assig
 
 function sendTelegramNotification(message, imageUrls = [], replyMarkup = null) {
   try {
-    // 1. ตรวจสอบโหมดทดสอบ (Test Mode)
-    // ถ้าเป็น Test Mode ให้ Log ลง Console เท่านั้น ไม่ยิง API และไม่ส่งข้อความขยะไปที่อื่น
     if (CONFIG.IS_TEST_MODE) {
       Logger.log("🛠️ [TEST MODE - NOT SENT TO TELEGRAM]");
       Logger.log("📝 Message Content:\n" + message);
@@ -1691,38 +2351,58 @@ function sendTelegramNotification(message, imageUrls = [], replyMarkup = null) {
       return { success: true, mode: 'TEST_ONLY' };
     }
 
+    if (!CONFIG.TELEGRAM_BOT_TOKEN || !CONFIG.TELEGRAM_CHAT_ID) {
+      throw new Error('ไม่พบการตั้งค่า Telegram');
+    }
+
+    const safeImageUrls = Array.isArray(imageUrls) ? imageUrls.slice(0, 10) : [];
+
     // 2. โหมดใช้งานจริง (Real Mode)
     // ส่งข้อความเพียวๆ ไม่เติม Prefix ใดๆ ตาม Requirement
     const telegramUrl = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}`;
     
     const payload = {
       chat_id: CONFIG.TELEGRAM_CHAT_ID,
-      text: message, // ส่งข้อความที่รับมาโดยตรง ไม่มีการเติม [MODE: REAL]
+      text: message,
       parse_mode: 'HTML'
     };
     
     if (replyMarkup) payload.reply_markup = replyMarkup;
 
-    // ส่งข้อความ
     UrlFetchApp.fetch(`${telegramUrl}/sendMessage`, {
       method: 'POST',
       contentType: 'application/json',
-      payload: JSON.stringify(payload)
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
     });
 
-    // ส่งรูปภาพ (ถ้ามี)
-    if (imageUrls && imageUrls.length > 0) {
-      // แปลง URL ให้ Telegram อ่านได้ และส่งเป็น Album
-      const media = imageUrls.slice(0, 10).map(url => ({ 
-        type: 'photo', 
-        media: convertToTelegramCompatibleUrl(url) 
-      }));
-      
-      UrlFetchApp.fetch(`${telegramUrl}/sendMediaGroup`, {
-        method: 'POST',
-        contentType: 'application/json',
-        payload: JSON.stringify({ chat_id: CONFIG.TELEGRAM_CHAT_ID, media: media })
-      });
+    if (safeImageUrls.length > 0) {
+      const telegramSendPhoto = `${telegramUrl}/sendPhoto`;
+      const list = safeImageUrls;
+      for (let i = 0; i < list.length; i++) {
+        try {
+          const fileId = extractFileIdFromUrl(String(list[i]));
+          if (!fileId) {
+            Logger.log('⚠️ ไม่พบ fileId จาก: ' + list[i]);
+            continue;
+          }
+          const driveFile = DriveApp.getFileById(fileId);
+          const blob = driveFile.getBlob();
+          // ส่งรูปแรกพร้อม caption = ข้อความ, รูปถัดไปไม่มี caption
+          const photoPayload = {
+            method: 'post',
+            payload: {
+              chat_id: String(CONFIG.TELEGRAM_CHAT_ID),
+              photo: blob
+            },
+            muteHttpExceptions: true
+          };
+          UrlFetchApp.fetch(telegramSendPhoto, photoPayload);
+          Logger.log('📸 ส่งรูปที่ ' + (i + 1) + ' สำเร็จ fileId=' + fileId);
+        } catch (imgErr) {
+          Logger.log('⚠️ ส่งรูปที่ ' + (i + 1) + ' ไม่สำเร็จ: ' + imgErr.toString());
+        }
+      }
     }
 
     return { success: true, mode: 'REAL_SENT' };
@@ -2435,6 +3115,7 @@ function createMonthlyReportDocument(year, month, selectedTechnician) {
 
     const compareYearAD = targetYear > 2400 ? targetYear - 543 : targetYear;
     const displayYearBE = targetYear > 2400 ? targetYear : targetYear + 543;
+    Logger.log('[REPORT] normalized target: month=' + targetMonth + ', yearAD=' + compareYearAD + ', yearBE=' + displayYearBE);
 
     const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
     const sheet = ss.getSheetByName(CONFIG.SHEET_NAME);
@@ -2456,6 +3137,13 @@ function createMonthlyReportDocument(year, month, selectedTechnician) {
     const idx = function(name) {
       return headers.indexOf(name);
     };
+    const idxAny = function(names) {
+      for (let i = 0; i < names.length; i++) {
+        const found = idx(names[i]);
+        if (found > -1) return found;
+      }
+      return -1;
+    };
 
     const colMap = {
       date: idx('วันที่'),
@@ -2466,7 +3154,7 @@ function createMonthlyReportDocument(year, month, selectedTechnician) {
       item: idx('รายการแจ้งซ่อม'),
       owner: idx('ชื่อผู้แจ้งซ่อม'),
       location: idx('สถานที่'),
-      status: idx('สถานะ'),
+      status: idxAny(['สถานะล่าสุด', 'สถานะ']),
       tech: idx('ผู้รับผิดชอบ'),
       img: idx('URL รูปภาพประกอบ'),
       priority: idx('ความเร่งด่วน')
@@ -2538,33 +3226,25 @@ function createMonthlyReportDocument(year, month, selectedTechnician) {
         Logger.log("normalized selectedTechnician: " + finalTechnicianFilter);
 
         const tableData = [[
-          'วันที่ / เวลา', 'เลขที่', 'รายการแจ้งซ่อม', 'ผู้แจ้ง / สถานที่', 'สถานะ', 'ผู้รับผิดชอบ', 'รูปภาพ'
+          'วันที่ / เวลา', 'เลขที่', 'รายการแจ้งซ่อม', 'ผู้แจ้ง / สถานที่', 'สถานะล่าสุด', 'ผู้รับผิดชอบ', 'รูปภาพ'
         ]];
 
-        const colWidths =[75, 105, 145, 155, 70, 90, 150];
+        const colWidths =[65, 85, 125, 135, 55, 65, 240]; // รวม 770 (A4 Landscape) — คุมคอลัมน์รูปภาพไม่ให้ row สูงเกิน
 
         let foundCount = 0;
         let completedCount = 0;
         let processingCount = 0;
         let externalCount = 0;
         const pdfRows =[];
+        const statusLogValues = getStatusLogValues_();
+        const statusLogMap = buildStatusLogMap_(statusLogValues);
 
         for (let i = 1; i < rawValues.length; i++) {
           const rowRaw = rawValues[i];
           const rowDisp = displayValues[i];
 
-          const createDateObj = colMap.date > -1 ? parseDateSynced(rowRaw[colMap.date], rowDisp[colMap.date]) : null;
-          const updateDateObj = colMap.updated > -1 ? parseDateSynced(rowRaw[colMap.updated], rowDisp[colMap.updated]) : null;
-          const doneDateObj = colMap.done > -1 ? parseDateSynced(rowRaw[colMap.done], rowDisp[colMap.done]) : null;
-          const receivedDateObj = colMap.received > -1 ? parseDateSynced(rowRaw[colMap.received], rowDisp[colMap.received]) : null;
-
-          const candidates = [updateDateObj, doneDateObj, receivedDateObj, createDateObj].filter(function(d) {
-            return d instanceof Date && !isNaN(d.getTime());
-          });
-          if (!candidates.length) continue;
-
-          const withTime = candidates.find(function(d) { return hasTime(d); });
-          const targetDateObj = withTime || candidates[0];
+          const targetDateObj = colMap.date > -1 ? parseDateSynced(rowRaw[colMap.date], rowDisp[colMap.date]) : null;
+          if (!(targetDateObj instanceof Date) || isNaN(targetDateObj.getTime())) continue;
 
           const rMonth = parseInt(Utilities.formatDate(targetDateObj, "GMT+7", "M"), 10);
           const rYearAD = parseInt(Utilities.formatDate(targetDateObj, "GMT+7", "yyyy"), 10);
@@ -2602,14 +3282,18 @@ function createMonthlyReportDocument(year, month, selectedTechnician) {
           // ใช้ techValue เพื่อโชว์ชื่อที่สะอาดแล้ว และถ้าไม่มีใครรับงานให้แสดง "รอการมอบหมาย"
           const techDisplay = finalTechnicianFilter ? techValue : (techValue || 'รอการมอบหมาย');
 
-      const dayStr = Utilities.formatDate(targetDateObj, "GMT+7", "dd/MM");
-      const yearBE = parseInt(Utilities.formatDate(targetDateObj, "GMT+7", "yyyy"), 10) + 543;
-      const timeStr = Utilities.formatDate(targetDateObj, "GMT+7", "HH:mm");
-      const hour = parseInt(Utilities.formatDate(targetDateObj, "GMT+7", "HH"), 10);
-      const min = parseInt(Utilities.formatDate(targetDateObj, "GMT+7", "mm"), 10);
+          // [FIX] ดึงข้อมูลวัน/เวลาดำเนินตามจริงที่อัปเดตล่าสุด
+          const updatedDateVal = colMap.updated > -1 ? parseDateSynced(rowRaw[colMap.updated], rowDisp[colMap.updated]) : null;
+          const displayDateObj = (updatedDateVal instanceof Date && !isNaN(updatedDateVal.getTime())) ? updatedDateVal : targetDateObj;
 
-      let dateDisplay = dayStr + '/' + yearBE;
-      if (hour !== 0 || min !== 0) dateDisplay += '\n' + timeStr + ' น.';
+          const dayStr = Utilities.formatDate(displayDateObj, "GMT+7", "dd/MM");
+          const yearBE = parseInt(Utilities.formatDate(displayDateObj, "GMT+7", "yyyy"), 10) + 543;
+          const timeStr = Utilities.formatDate(displayDateObj, "GMT+7", "HH:mm");
+          const hour = parseInt(Utilities.formatDate(displayDateObj, "GMT+7", "HH"), 10);
+          const min = parseInt(Utilities.formatDate(displayDateObj, "GMT+7", "mm"), 10);
+
+          let dateDisplay = dayStr + '/' + yearBE;
+          if (hour !== 0 || min !== 0) dateDisplay += '\n' + timeStr + ' น.';
 
       const seqVal = colMap.seq > -1 && rowRaw[colMap.seq] ? String(rowRaw[colMap.seq]).trim() : '';
       const itemVal = colMap.item > -1 && rowRaw[colMap.item] ? String(rowRaw[colMap.item]).trim() : '';
@@ -2619,6 +3303,14 @@ function createMonthlyReportDocument(year, month, selectedTechnician) {
 
       const imgRaw = colMap.img > -1 ? rowRaw[colMap.img] : null;
       const imgIds = extractImageIds(imgRaw);
+      const statusHistory = statusLogMap[seqVal] || [];
+      const fallbackStatusHistory = [{
+        date: displayDateObj,
+        status: statusRaw,
+        note: '',
+        user: techDisplay,
+        imageIds: imgIds || []
+      }];
 
       if (!technicianFilter && !techValue) {
         Logger.log('[REPORT] replace empty technician with: รอการมอบหมาย | seq=' + seqVal);
@@ -2626,7 +3318,8 @@ function createMonthlyReportDocument(year, month, selectedTechnician) {
 
       pdfRows.push({
         data: [dateDisplay, seqVal, itemVal, ownerInfo, statusDisplay, techDisplay, ''],
-        imgIds: imgIds || []
+        imgIds: imgIds || [],
+        statusHistory: statusHistory.length ? statusHistory : fallbackStatusHistory
       });
     }
 
@@ -2649,7 +3342,7 @@ function createMonthlyReportDocument(year, month, selectedTechnician) {
         isEmpty: true,
         message: emptyMessage,
         reportData: {
-          summary: { totalItems: 0, totalCompleted: 0, totalProcessing: 0 },
+          summary: { totalItems: 0, totalCompleted: 0, totalProcessing: 0, totalExternal: 0 },
           year: displayYearBE,
           monthName: monthName,
           technicianName: technicianFilter || '',
@@ -2667,6 +3360,7 @@ function createMonthlyReportDocument(year, month, selectedTechnician) {
       foundCount,
       completedCount,
       processingCount,
+      externalCount,
       {
         technicianName: technicianFilter || '',
         reportScopeLabel: technicianFilter ? ('ผู้รับผิดชอบ ' + technicianFilter) : 'รวมทุกคน'
@@ -2713,7 +3407,7 @@ function helpGetReportImageBlob(fileId) {
   return null;
 }
 
-function generatePdfFileFromRows(pdfRows, tableData, colWidths, targetMonth, displayYearBE, foundCount, completedCount, processingCount, options) {
+function generatePdfFileFromRows(pdfRows, tableData, colWidths, targetMonth, displayYearBE, foundCount, completedCount, processingCount, externalCount, options) {
   const monthName = CONFIG && CONFIG.MONTHS_TH ? CONFIG.MONTHS_TH[targetMonth - 1] : String(targetMonth);
   const technicianName = options && options.technicianName ? String(options.technicianName).trim() : '';
   const isSingleTechnicianReport = !!technicianName;
@@ -2728,7 +3422,7 @@ function generatePdfFileFromRows(pdfRows, tableData, colWidths, targetMonth, dis
   const body = doc.getBody();
   const font = CONFIG && CONFIG.FONT_FAMILY ? CONFIG.FONT_FAMILY : 'Sarabun';
 
-  doc.setMarginLeft(36).setMarginRight(36).setMarginTop(36).setMarginBottom(36);
+  doc.setMarginLeft(24).setMarginRight(24).setMarginTop(24).setMarginBottom(24);
   try {
     if (typeof applyDocLandscapeA4 === 'function') applyDocLandscapeA4(doc.getId());
   } catch (e) {
@@ -2772,7 +3466,7 @@ function generatePdfFileFromRows(pdfRows, tableData, colWidths, targetMonth, dis
   const defaultWidths = [75, 105, 145, 155, 70, 90, 150];
   const widths = Array.isArray(colWidths) && colWidths.length === colCount ? colWidths : defaultWidths;
 
-  let PAGE_LIMIT = 300;
+  let PAGE_LIMIT = 480;
   let currentHeight = 0;
 
   let currentTable = body.appendTable();
@@ -2783,17 +3477,18 @@ function generatePdfFileFromRows(pdfRows, tableData, colWidths, targetMonth, dis
       const dataArr = Array.isArray(r.data) ? r.data.slice() : [];
       while (dataArr.length < colCount) dataArr.push('');
       const ids = Array.isArray(r.imgIds) ? r.imgIds : (r.imgId ? [String(r.imgId)] : []);
-      return { data: dataArr, imgIds: ids };
+      return { data: dataArr, imgIds: ids, statusHistory: Array.isArray(r.statusHistory) ? r.statusHistory : [] };
     }
 
     const arr = Array.isArray(r) ? r.slice() : [];
     while (arr.length < colCount) arr.push('');
-    return { data: arr, imgIds: [] };
+    return { data: arr, imgIds: [], statusHistory: [] };
   });
 
   rows.forEach(function(row) {
     const hasImage = row.imgIds && row.imgIds.length > 0;
-    let estimatedRowHeight = hasImage ? 140 : 60;
+    // [FIX] รูปเรียงแนวนอนใน bounding box → กัน page break ตัด row รูปภาพ
+    let estimatedRowHeight = hasImage ? 160 : 65;
 
     const maxTextLen = row.data.reduce(function(max, txt) {
       return Math.max(max, String(txt).length);
@@ -2813,7 +3508,7 @@ function generatePdfFileFromRows(pdfRows, tableData, colWidths, targetMonth, dis
 
       currentTable = body.appendTable();
       formatTableHeader(currentTable, tableData[0], widths, font);
-      PAGE_LIMIT = 420;
+      PAGE_LIMIT = 480;
       currentHeight = 0;
     }
 
@@ -2821,6 +3516,8 @@ function generatePdfFileFromRows(pdfRows, tableData, colWidths, targetMonth, dis
     currentHeight += estimatedRowHeight;
   });
 
+  body.appendParagraph(' ');
+  appendStatusHistoryToReport_(body, rows, font);
   body.appendParagraph(' ');
   
   body.appendParagraph('รวมทั้งหมด: ' + foundCount + ' รายการ | เสร็จสิ้น: ' + completedCount + ' | กำลังดำเนินการ: ' + processingCount + ' | ดำเนินการภายนอก: ' + externalCount)
@@ -2875,6 +3572,90 @@ function generatePdfFileFromRows(pdfRows, tableData, colWidths, targetMonth, dis
 
 // --- Helper Functions for Smart Table ---
 
+function appendStatusHistoryToReport_(body, rows, font) {
+  const historyRows = [];
+  const widths = [100, 90, 170, 90, 180];
+  const header = ['วันที่บันทึก', 'สถานะ', 'หมายเหตุ', 'ผู้บันทึก', 'รูปภาพ'];
+
+  (Array.isArray(rows) ? rows : []).forEach(function(row) {
+    const seq = row && row.data ? String(row.data[1] || '').trim() : '';
+    const item = row && row.data ? String(row.data[2] || '').trim() : '';
+    const history = row && Array.isArray(row.statusHistory) ? row.statusHistory : [];
+
+    history.forEach(function(log) {
+      const d = log.date instanceof Date && !isNaN(log.date.getTime())
+        ? Utilities.formatDate(log.date, 'GMT+7', 'dd/MM/yyyy\nHH:mm น.')
+        : String(log.date || '-');
+
+      historyRows.push({
+        data: [
+          d,
+          String(log.status || '-'),
+          String(log.note || '-'),
+          String(log.user || '-'),
+          ''
+        ],
+        imgIds: Array.isArray(log.imageIds) ? log.imageIds : [],
+        seqLabel: seq + (item ? ' - ' + item : '')
+      });
+    });
+  });
+
+  if (!historyRows.length) return;
+
+  body.appendPageBreak();
+  body.appendParagraph('ประวัติสถานะ')
+    .setHeading(DocumentApp.ParagraphHeading.HEADING3)
+    .setFontFamily(font)
+    .setFontSize(12)
+    .setBold(true);
+
+  let currentSeqLabel = '';
+  let currentTable = null;
+  let currentHeight = 35;
+  const pageLimit = 480;
+
+  const appendHistoryPageBreak = function() {
+    body.appendPageBreak();
+    currentHeight = 0;
+  };
+
+  const startHistoryTable = function(seqLabel) {
+    body.appendParagraph('เลขที่: ' + seqLabel)
+      .setFontFamily(font)
+      .setFontSize(10)
+      .setBold(true);
+    currentTable = body.appendTable();
+    formatTableHeader(currentTable, header, widths, font);
+    currentHeight += 55;
+  };
+
+  historyRows.forEach(function(row) {
+    if (row.seqLabel !== currentSeqLabel) {
+      currentSeqLabel = row.seqLabel;
+      if (currentHeight > 35 && currentHeight + 115 > pageLimit) {
+        appendHistoryPageBreak();
+      }
+      startHistoryTable(currentSeqLabel);
+    }
+
+    const hasImage = row.imgIds && row.imgIds.length > 0;
+    let estimatedRowHeight = hasImage ? 145 : 55;
+    const maxTextLen = row.data.reduce(function(max, txt) {
+      return Math.max(max, String(txt).length);
+    }, 0);
+    if (maxTextLen > 80) estimatedRowHeight += 35;
+
+    if (currentHeight + estimatedRowHeight > pageLimit) {
+      appendHistoryPageBreak();
+      startHistoryTable(currentSeqLabel);
+    }
+
+    appendRowToTable(currentTable, row, widths, font);
+    currentHeight += estimatedRowHeight;
+  });
+}
+
 function formatTableHeader(table, headerData, widths, font) {
     const tr = table.appendTableRow();
     headerData.forEach((text, i) => {
@@ -2899,9 +3680,8 @@ function appendRowToTable(table, rowData, widths, font) {
     const padTop = 7;
     const padBottom = 7;
     const colCount = widths.length;
-    const imgColIdx = colCount - 1; // สมมติรูปอยู่ช่องสุดท้าย
+    const imgColIdx = colCount - 1;
     const imgColWidth = widths[imgColIdx];
-    const maxCellDim = Math.max(90, Math.min(170, Math.floor(imgColWidth - 12)));
 
     // Text Columns
     for (let c = 0; c < colCount - 1; c++) {
@@ -2917,36 +3697,47 @@ function appendRowToTable(table, rowData, widths, font) {
 
     // Image Column
     const imgCell = tr.appendTableCell('');
-    imgCell.setWidth(imgColWidth).setPaddingTop(6).setPaddingBottom(6);
-    
-    // Spacer hack for height
-    try {
-        const spacer = imgCell.appendParagraph(" ");
-        spacer.setFontSize(1).setSpacingBefore(0).setSpacingAfter(0);
-    } catch(e){}
+    imgCell.setWidth(imgColWidth).setPaddingTop(2).setPaddingBottom(2);
 
+    while (imgCell.getNumChildren() > 0) imgCell.removeChild(imgCell.getChild(0));
     const imgP = imgCell.appendParagraph('');
-    imgP.setAlignment(DocumentApp.HorizontalAlignment.CENTER).setSpacingBefore(0).setSpacingAfter(0);
+    imgP.setAlignment(DocumentApp.HorizontalAlignment.CENTER)
+      .setSpacingBefore(0)
+      .setSpacingAfter(0);
 
-    const ids = rowData.imgIds.filter(Boolean).slice(0, 3);
+    const ids = (rowData.imgIds || []).filter(Boolean).slice(0, 3);
     if (!ids.length) {
         imgP.appendText('-').setFontFamily(font).setFontSize(cellFontSize);
     } else {
-        const gap = 6;
-        const perDim = Math.max(70, Math.min(150, Math.floor((maxCellDim - gap * (ids.length - 1)) / ids.length)));
-        
-        ids.forEach((id, idx) => {
+        const gap = ids.length > 1 ? 4 : 0;
+        const usableWidth = Math.max(44, imgColWidth - 8);
+        const usableHeight = 140;
+        let baseWidth = usableWidth;
+        if (ids.length === 2) {
+            baseWidth = Math.floor((usableWidth - gap) * 0.48);
+        } else if (ids.length >= 3) {
+            baseWidth = Math.floor((usableWidth - gap * 2) * 0.31);
+        }
+        baseWidth = Math.max(30, baseWidth);
+
+        ids.forEach(function(id, index) {
             try {
                 const f = DriveApp.getFileById(id);
                 const inlineImg = imgP.appendInlineImage(f.getBlob());
-                const w = inlineImg.getWidth();
-                const h = inlineImg.getHeight();
-                if (w > 0 && h > 0) {
-                    const ratio = (w > h) ? (perDim / w) : (perDim / h);
-                    inlineImg.setWidth(Math.floor(w * ratio));
-                    inlineImg.setHeight(Math.floor(h * ratio));
+                const origW = inlineImg.getWidth();
+                const origH = inlineImg.getHeight();
+                if (origW > 0 && origH > 0) {
+                    const scaleByWidth = baseWidth / origW;
+                    const scaleByHeight = usableHeight / origH;
+                    const scale = Math.min(scaleByWidth, scaleByHeight);
+                    inlineImg.setWidth(Math.max(1, Math.floor(origW * scale)));
+                    inlineImg.setHeight(Math.max(1, Math.floor(origH * scale)));
+                } else {
+                    inlineImg.setWidth(baseWidth);
                 }
-                if (idx < ids.length - 1) imgP.appendText('\n');
+                if (index < ids.length - 1) {
+                    imgP.appendText(' ');
+                }
             } catch (e) {
                // Ignore image load error
             }

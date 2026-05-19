@@ -400,6 +400,42 @@ function generateMonthlyStockReport(month, yearBE) {
     var totalOutQty = 0;
 
     var bodyRows = [];
+    var monthlyMovementMap = {};
+
+    for (var lm = 1; lm < ledgerData.length; lm++) {
+      var mPartId = String(ledgerData[lm][2] || '').trim();
+      var mPartName = String(ledgerData[lm][3] || '').trim();
+      var mType = String(ledgerData[lm][4] || '').trim();
+      var mQty = Number(ledgerData[lm][5] || 0);
+      var mDateText = String(ledgerData[lm][1] || '').trim();
+
+      if (!mPartId && !mPartName) continue;
+
+      var mMatch = mDateText.match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);
+      if (!mMatch) continue;
+
+      var mMonth = mMatch[2].padStart(2, '0');
+      var mYear = Number(mMatch[3]);
+      if (mYear < 2400) mYear += 543;
+      if (mMonth !== targetMonthText || mYear !== targetYearBE) continue;
+
+      var movementKey = mPartId || mPartName;
+      if (!monthlyMovementMap[movementKey]) {
+        monthlyMovementMap[movementKey] = { partId: mPartId, partName: mPartName, inQty: 0, outQty: 0 };
+      }
+
+      if (mType === 'รับเข้า' || mType === 'ปรับเพิ่ม' || mType === 'คืนเข้า') {
+        monthlyMovementMap[movementKey].inQty += mQty;
+        totalInQty += mQty;
+      }
+
+      if (mType === 'เบิกออก' || mType === 'ใช้ในงานซ่อม' || mType === 'ปรับลด') {
+        monthlyMovementMap[movementKey].outQty += mQty;
+        totalOutQty += mQty;
+      }
+    }
+
+    var hasMonthlyMovement = Object.keys(monthlyMovementMap).length > 0;
 
     for (var i = 1; i < masterData.length; i++) {
       var partId = String(masterData[i][0] || '').trim();
@@ -417,42 +453,17 @@ function generateMonthlyStockReport(month, yearBE) {
       if (status === 'ใกล้หมด') lowStockCount++;
       totalStockValue += (balance * cost);
 
-      var inQty = 0;
-      var outQty = 0;
+      var movement = monthlyMovementMap[partId] || null;
+      var inQty = movement ? movement.inQty : 0;
+      var outQty = movement ? movement.outQty : 0;
 
-      for (var j = 1; j < ledgerData.length; j++) {
-        var ledgerPartId = String(ledgerData[j][2] || '').trim();
-        var ledgerType = String(ledgerData[j][4] || '').trim();
-        var ledgerQty = Number(ledgerData[j][5] || 0);
-        var ledgerDateText = String(ledgerData[j][1] || '').trim();
-
-        if (ledgerPartId !== partId) continue;
-
-        var match = ledgerDateText.match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);
-        if (!match) continue;
-
-        var ledgerMonth = match[2].padStart(2, '0');
-        var ledgerYear = Number(match[3]);
-
-        if (ledgerYear < 2400) ledgerYear += 543;
-
-        if (ledgerMonth !== targetMonthText || ledgerYear !== targetYearBE) continue;
-
-        if (ledgerType === 'รับเข้า' || ledgerType === 'ปรับเพิ่ม' || ledgerType === 'คืนเข้า') {
-          inQty += ledgerQty;
-          totalInQty += ledgerQty;
-        }
-
-        if (ledgerType === 'เบิกออก' || ledgerType === 'ใช้ในงานซ่อม' || ledgerType === 'ปรับลด') {
-          outQty += ledgerQty;
-          totalOutQty += ledgerQty;
-        }
-      }
+      if (!movement) continue;
+      delete monthlyMovementMap[partId];
 
       var openingBalance = balance - inQty + outQty;
 
       bodyRows.push([
-        totalParts,
+        bodyRows.length + 1,
         partId,
         partName,
         category,
@@ -464,6 +475,22 @@ function generateMonthlyStockReport(month, yearBE) {
         status
       ]);
     }
+
+    Object.keys(monthlyMovementMap).forEach(function(key) {
+      var movement = monthlyMovementMap[key];
+      bodyRows.push([
+        bodyRows.length + 1,
+        movement.partId || '-',
+        movement.partName || '-',
+        '-',
+        '-',
+        '',
+        movement.inQty,
+        movement.outQty,
+        '',
+        'มีรายการเคลื่อนไหว'
+      ]);
+    });
 
     var html = [];
     html.push('<html><head><meta charset="UTF-8">');
@@ -496,6 +523,9 @@ function generateMonthlyStockReport(month, yearBE) {
     html.push('<div>มูลค่าสต็อกคงเหลือรวม: ' + totalStockValue.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' บาท</div>');
     html.push('<div>จำนวนรับเข้ารวมเดือนนี้: ' + totalInQty + '</div>');
     html.push('<div>จำนวนเบิกออกรวมเดือนนี้: ' + totalOutQty + '</div>');
+    if (!hasMonthlyMovement) {
+      html.push('<div>หมายเหตุประจำเดือน: ไม่มีความเปลี่ยนแปลงเดือนนี้</div>');
+    }
     html.push('</div>');
 
     html.push('<table>');
@@ -516,7 +546,7 @@ function generateMonthlyStockReport(month, yearBE) {
     html.push('<tbody>');
 
     if (bodyRows.length === 0) {
-      html.push('<tr><td colspan="10" class="center">ไม่มีข้อมูลอะไหล่ในระบบ</td></tr>');
+      html.push('<tr><td colspan="10" class="center">ไม่มีความเปลี่ยนแปลงเดือนนี้</td></tr>');
     } else {
       for (var r = 0; r < bodyRows.length; r++) {
         var row = bodyRows[r];
@@ -548,6 +578,7 @@ function generateMonthlyStockReport(month, yearBE) {
 
     var folder = DriveApp.getRootFolder();
     var file = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
 
     return {
       success: true,
@@ -572,6 +603,10 @@ function getAvailableStockReportMonths() {
     var sheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).getSheetByName('ประวัติสต็อกอะไหล่');
     var values = sheet.getRange(2, 2, Math.max(1, sheet.getLastRow() - 1), 1).getDisplayValues();
     var monthSet = new Set();
+    var now = new Date();
+    var currentYearBE = now.getFullYear() + 543;
+    var currentMonth = now.getMonth() + 1;
+    monthSet.add(currentYearBE + '-' + String(currentMonth).padStart(2, '0'));
     
     for (var i = 0; i < values.length; i++) {
       var dateStr = String(values[i][0] || '').trim();

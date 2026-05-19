@@ -474,38 +474,640 @@
 .modal-title { font-size: 1.25rem; font-weight: 700; color: #1f2937; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem; }
 .modal-subtitle { font-size: 0.9rem; color: #6b7280; margin-bottom: 1.5rem; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #f3f4f6; }
+
+/* [ANCHOR: STOCK-UI-POLISH-20260520] */
+:root {
+  --stock-ui-bg: oklch(0.968 0.036 250);
+  --stock-ui-surface: oklch(0.995 0.006 250);
+  --stock-ui-surface-2: oklch(0.965 0.022 250);
+  --stock-ui-line: oklch(0.885 0.025 250);
+  --stock-ui-text: oklch(0.245 0.04 250);
+  --stock-ui-muted: oklch(0.49 0.04 250);
+  --stock-ui-blue: oklch(0.55 0.22 255);
+  --stock-ui-teal: oklch(0.62 0.16 184);
+  --stock-ui-violet: oklch(0.58 0.21 292);
+  --stock-ui-pink: oklch(0.64 0.2 345);
+  --stock-ui-amber: oklch(0.72 0.17 72);
+  --stock-ui-lime: oklch(0.7 0.15 138);
+  --stock-ui-red: oklch(0.58 0.21 26);
+}
+
+body {
+  background:
+    radial-gradient(circle at 10% 7%, oklch(0.88 0.13 292 / 0.34), transparent 32%),
+    radial-gradient(circle at 88% 12%, oklch(0.88 0.12 184 / 0.38), transparent 30%),
+    radial-gradient(circle at 48% 0%, oklch(0.92 0.11 72 / 0.26), transparent 27%),
+    linear-gradient(135deg, var(--stock-ui-bg), oklch(0.955 0.045 220));
+  color: var(--stock-ui-text);
+  font-size: 14.5px;
+}
+
+.stock-page-shell {
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.stock-topbar {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.stock-page-card,
+.card.stock-page-card {
+  max-width: 1280px;
+  margin: 0 auto;
+  border: 1px solid var(--stock-ui-line);
+  border-radius: 8px;
+  background: var(--stock-ui-surface);
+  box-shadow: 0 22px 52px oklch(0.42 0.08 250 / 0.16);
+  overflow: hidden;
+}
+
+.stock-hero-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.05rem 1.25rem;
+  border-bottom: 1px solid var(--stock-ui-line);
+  background: linear-gradient(135deg, oklch(0.985 0.04 255), oklch(0.976 0.052 184) 52%, oklch(0.984 0.038 72));
+}
+
+.stock-hero-title {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.stock-hero-title h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.25;
+  font-weight: 800;
+}
+
+.stock-hero-title p {
+  margin: 0.25rem 0 0;
+  color: var(--stock-ui-muted);
+  font-size: 0.86rem;
+}
+
+.stock-title-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--stock-ui-blue), var(--stock-ui-violet));
+  color: oklch(0.99 0.004 250);
+  box-shadow: 0 10px 24px oklch(0.55 0.18 255 / 0.22);
+}
+
+.stock-title-icon i {
+  font-size: 1rem;
+}
+
+.stock-hero-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.stock-main-content {
+  max-width: 1160px;
+  padding: 1.35rem 1.35rem 1rem;
+}
+
+.summary-strip,
+.grid.summary-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.2rem !important;
+}
+
+.summary-card {
+  min-height: 82px;
+  border: 1px solid var(--stock-ui-line);
+  border-radius: 8px;
+  padding: 1rem 1.05rem;
+  background: linear-gradient(135deg, var(--stock-ui-surface), oklch(0.978 0.035 250));
+  color: var(--stock-ui-text);
+  box-shadow: none;
+  gap: 0.85rem;
+}
+
+.summary-card:hover {
+  transform: none;
+}
+
+.summary-blue {
+  background:
+    linear-gradient(135deg, oklch(0.965 0.055 255), oklch(0.935 0.075 206));
+  border-color: oklch(0.82 0.07 232);
+}
+
+.summary-red {
+  background:
+    linear-gradient(135deg, oklch(0.97 0.06 342), oklch(0.955 0.072 28));
+  border-color: oklch(0.84 0.065 24);
+}
+
+.summary-teal,
+.summary-amber {
+  background: linear-gradient(135deg, var(--stock-ui-surface), oklch(0.978 0.035 250));
+}
+
+.summary-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  flex: 0 0 auto;
+}
+
+.summary-blue .summary-icon { background: oklch(0.935 0.07 255); color: var(--stock-ui-blue); }
+.summary-red .summary-icon { background: oklch(0.945 0.065 345); color: var(--stock-ui-pink); }
+.summary-teal .summary-icon { background: oklch(0.935 0.06 184); color: var(--stock-ui-teal); }
+.summary-amber .summary-icon { background: oklch(0.955 0.075 72); color: oklch(0.52 0.12 72); }
+
+.summary-blue .summary-icon {
+  background: oklch(0.985 0.02 255);
+  color: var(--stock-ui-blue);
+  box-shadow: inset 0 0 0 1px oklch(0.84 0.065 245);
+}
+
+.summary-red .summary-icon {
+  background: oklch(0.985 0.024 342);
+  color: var(--stock-ui-pink);
+  box-shadow: inset 0 0 0 1px oklch(0.87 0.055 340);
+}
+
+.summary-info h3,
+.summary-info p {
+  color: var(--stock-ui-text);
+}
+
+.summary-info h3 {
+  font-size: 0.95rem;
+  line-height: 1.28;
+  margin-bottom: 0.28rem;
+  font-weight: 750;
+  opacity: 1;
+}
+
+.summary-info p {
+  font-size: 2rem;
+  line-height: 1;
+  font-weight: 850;
+}
+
+.stock-content-grid {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.stock-panel,
+.card.stock-panel {
+  border: 1px solid var(--stock-ui-line);
+  border-radius: 8px;
+  background: var(--stock-ui-surface);
+  box-shadow: none;
+  padding: 0;
+  overflow: hidden;
+  margin-bottom: 0;
+}
+
+.stock-panel-head {
+  padding: 1.05rem 1.2rem;
+  border-bottom: 1px solid oklch(0.82 0.035 220);
+  background: linear-gradient(135deg, oklch(0.935 0.038 238), oklch(0.955 0.045 184));
+}
+
+.stock-panel-head .header-title,
+.stock-panel-head h2 {
+  margin: 0;
+  color: var(--stock-ui-text) !important;
+  font-size: 1.18rem;
+  line-height: 1.25;
+  font-weight: 800;
+}
+
+.stock-panel-body {
+  padding: 1.1rem;
+}
+
+.stock-panel > form {
+  padding: 1.15rem 1.2rem 1.25rem;
+}
+
+.stock-panel .form-group {
+  margin-bottom: 1.05rem;
+}
+
+.stock-panel label {
+  font-size: 0.94rem;
+  line-height: 1.25;
+  color: var(--stock-ui-text);
+  font-weight: 700;
+}
+
+.stock-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.stock-panel input,
+.stock-panel select,
+.stock-panel textarea,
+.search-input {
+  min-height: 44px;
+  border: 1px solid var(--stock-ui-line);
+  border-radius: 8px;
+  background: var(--stock-ui-surface);
+  color: var(--stock-ui-text);
+  font-size: 0.96rem;
+}
+
+.stock-panel input:focus,
+.stock-panel select:focus,
+.search-input:focus {
+  border-color: var(--stock-ui-blue);
+  box-shadow: 0 0 0 3px oklch(0.54 0.18 254 / 0.14);
+}
+
+.stock-actions-row {
+  display: grid;
+  grid-template-columns: auto auto 1fr minmax(230px, 270px) auto;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.15rem;
+  margin-bottom: 1.25rem;
+  padding-top: 0.95rem;
+  padding-bottom: 0.25rem;
+  border-top: 1px solid oklch(0.91 0.018 238);
+}
+
+.btn,
+.stock-action-btn {
+  min-height: 42px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, color 180ms ease, opacity 180ms ease;
+}
+
+.stock-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0 0.9rem;
+  border: 1px solid var(--stock-ui-line);
+  background: var(--stock-ui-surface-2);
+  color: var(--stock-ui-text);
+  font-weight: 700;
+  font-size: 0.96rem;
+}
+
+.stock-action-btn.primary {
+  border-color: var(--stock-ui-blue);
+  background: linear-gradient(135deg, var(--stock-ui-blue), var(--stock-ui-violet) 58%, var(--stock-ui-pink));
+  color: oklch(0.99 0.004 250);
+  box-shadow: 0 10px 20px oklch(0.55 0.2 255 / 0.2);
+}
+
+.stock-action-btn.pdf {
+  border-color: oklch(0.76 0.04 255);
+  background: oklch(0.975 0.012 250);
+  color: oklch(0.36 0.045 250);
+  box-shadow: none;
+}
+
+.btn:disabled,
+.stock-action-btn:disabled,
+.stock-action-btn.is-loading {
+  cursor: not-allowed;
+  opacity: 0.62;
+  box-shadow: none;
+}
+
+.stock-action-btn.is-loading::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: stockSpin 780ms linear infinite;
+}
+
+@keyframes stockSpin {
+  to { transform: rotate(360deg); }
+}
+
+.table-header-flex {
+  padding: 0;
+  margin: 0;
+  border-bottom: 0;
+}
+
+.stock-table-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.95rem 1.35rem;
+  flex-wrap: wrap;
+}
+
+.stock-table-title h2 {
+  flex: 1 1 420px;
+}
+
+.stock-table-title > div {
+  flex: 0 1 320px;
+}
+
+.stock-table-title .search-input {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+}
+
+.table-container {
+  padding: 1.15rem 1.2rem 1.25rem;
+  overflow-x: hidden;
+}
+
+.table-container table {
+  min-width: 0;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--stock-ui-line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--stock-ui-surface);
+}
+
+.table-container th {
+  background: linear-gradient(180deg, oklch(0.96 0.03 250), oklch(0.94 0.035 250));
+  color: var(--stock-ui-muted);
+  font-size: 0.88rem;
+  font-weight: 750;
+  position: static;
+}
+
+.table-container th,
+.table-container td {
+  padding: 0.86rem 0.9rem;
+  font-size: 0.95rem;
+  line-height: 1.38;
+}
+
+#partsTbody tr {
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+
+#partsTbody tr:hover {
+  background: oklch(0.968 0.03 238);
+  box-shadow: inset 3px 0 0 var(--stock-ui-blue);
+}
+
+.badge-low,
+.badge-ok,
+.badge-warn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 750;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.badge-ok {
+  background: oklch(0.94 0.07 138);
+  color: oklch(0.42 0.12 138);
+  border-color: oklch(0.84 0.07 138);
+}
+
+.badge-low {
+  background: oklch(0.95 0.06 26);
+  color: var(--stock-ui-red);
+  border-color: oklch(0.86 0.05 26);
+}
+
+.stock-edit-btn {
+  min-height: 34px;
+  padding: 0 0.65rem;
+  border-radius: 7px;
+  border: 1px solid oklch(0.82 0.03 238);
+  background: var(--stock-ui-surface);
+  color: var(--stock-ui-text);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.stock-delete-btn {
+  min-height: 34px;
+  padding: 0 0.65rem;
+  border-radius: 7px;
+  border: 1px solid oklch(0.86 0.05 26);
+  background: oklch(0.95 0.06 26);
+  color: var(--stock-ui-red);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.stock-empty-state {
+  text-align: center;
+  color: var(--stock-ui-muted);
+  padding: 1.55rem;
+  border: 1px dashed oklch(0.78 0.04 238);
+  border-radius: 8px;
+  background: oklch(0.985 0.014 238);
+  font-size: 0.98rem;
+}
+
+.stock-empty-state::before {
+  content: "\f49e";
+  display: block;
+  margin-bottom: 0.4rem;
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  color: var(--stock-ui-blue);
+  font-size: 1.35rem;
+}
+
+.cell-clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.code {
+  color: var(--stock-ui-blue);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .stock-hero-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .stock-hero-actions,
+  .stock-content-grid,
+  .stock-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-strip,
+  .grid.summary-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stock-hero-actions .stock-action-btn,
+  .stock-actions-row .stock-action-btn,
+  .stock-panel select.month-dropdown {
+    width: 100%;
+  }
+
+  .stock-table-title {
+    align-items: stretch;
+  }
+
+  .stock-table-title h2 {
+    flex: 1 0 100%;
+  }
+
+  .stock-table-title > div {
+    flex: 1 0 100%;
+  }
+
+  .stock-table-title .search-input {
+    max-width: none;
+    min-width: 0;
+  }
+
+  .table-container {
+    overflow-x: auto;
+  }
+
+  .table-container table {
+    min-width: 720px;
+    table-layout: auto;
+  }
+}
+
+@media (max-width: 560px) {
+  body {
+    padding: 0.75rem;
+  }
+
+  .summary-strip,
+  .grid.summary-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .table-container {
+    overflow-x: visible;
+  }
+
+  .table-container table {
+    min-width: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .table-container thead {
+    display: none;
+  }
+
+  .table-container tbody {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .table-container tr {
+    display: block;
+    border: 1px solid var(--stock-ui-line);
+    border-radius: 8px;
+    background: var(--stock-ui-surface);
+    padding: 0.65rem 0.75rem;
+  }
+
+  .table-container td {
+    display: grid;
+    grid-template-columns: minmax(96px, 36%) 1fr;
+    gap: 0.65rem;
+    align-items: start;
+    border-bottom: 1px solid oklch(0.9 0.015 238);
+    padding: 0.5rem 0;
+  }
+
+  .table-container td:last-child {
+    border-bottom: 0;
+  }
+
+  .table-container td::before {
+    content: attr(data-label);
+    color: var(--stock-ui-muted);
+    font-size: 0.78rem;
+    font-weight: 750;
+  }
+}
   </style>
 </head>
 <body>
   
 
-    <!-- [ANCHOR: STOCK-BACK-DASHBOARD-BUTTON] -->
-<div style="margin-bottom:12px;">
-  <button class="btn" onclick="goDashboard()" 
-  style="background:#e5e7eb;color:#111827;">
-  ← กลับ Dashboard
+<!-- [ANCHOR: STOCK-BACK-DASHBOARD-BUTTON] -->
+<div class="stock-topbar">
+  <button class="stock-action-btn" onclick="goDashboard()">
+  <i class="fas fa-arrow-left"></i> กลับ Dashboard
   </button>
 </div>
 
-<div class="card">
+<div class="card stock-page-card">
 
-  <div class="container">
+  <div class="container stock-main-content">
     <div id="alertBox" class="alert"></div>
     <div id="globalLoader" class="loader">กำลังประมวลผล...</div>
 
     <!-- ส่วนที่ 1: Dashboard สรุป -->
-  <div class="grid grid-cols-2" style="margin-bottom: 2rem;">
+  <div class="summary-strip grid grid-cols-2" style="margin-bottom: 2rem;">
       <div class="summary-card summary-blue">
         <div class="summary-icon"><i class="fas fa-cog"></i></div>
         <div class="summary-info">
-          <h3>รายการอะไหล่ทั้งหมด (Total Spare Parts)</h3>
+          <h3>รายการอะไหล่ทั้งหมด</h3>
           <p id="dashTotalParts">0</p>
         </div>
       </div>
       <div class="summary-card summary-red">
         <div class="summary-icon"><i class="fas fa-exclamation-triangle"></i></div>
         <div class="summary-info">
-          <h3>อะไหล่ใกล้หมด (Low Stock Alerts)</h3>
+          <h3>อะไหล่ใกล้หมด</h3>
           <p id="dashLowStock">0</p>
         </div>
       </div>
@@ -513,8 +1115,10 @@
 
     <!-- ส่วนที่ 2: ฟอร์มทำรายการสต็อก -->
    <!-- [ANCHOR: STOCK-FORM-FULL-CLEAN-REPLACE] -->
-<div class="card">
-  <h2 class="header-title">ทำรายการสต็อก (รับเข้า / เบิกออก)</h2>
+<div class="card stock-panel">
+  <div class="stock-panel-head">
+    <h2 class="header-title">ทำรายการสต็อก (รับเข้า / เบิกออก)</h2>
+  </div>
 
   <form id="transForm">
     <div class="grid grid-cols-2">
@@ -593,12 +1197,12 @@
       <input type="text" id="transNote" placeholder="รายละเอียดเพิ่มเติม">
     </div>
 
-    <div style="margin-top: 1.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; width: 100%;">
-      <button type="submit" class="btn btn-primary" id="btnSubmitTrans">
+    <div class="stock-actions-row">
+      <button type="submit" class="stock-action-btn primary" id="btnSubmitTrans">
         <i class="fas fa-save"></i> บันทึกรายการ
       </button>
 
-      <button type="button" class="btn btn-secondary" onclick="resetTransForm()">
+      <button type="button" class="stock-action-btn" onclick="resetTransForm()">
         <i class="fas fa-times"></i> ยกเลิก
       </button>
 
@@ -610,18 +1214,18 @@
         <option value="">⏳ กำลังโหลดเดือนรายงาน...</option>
       </select>
 
-      <button type="button" class="btn btn-secondary" id="btnDownloadMonthlyPdf" onclick="triggerStockPdf()" disabled style="white-space: nowrap;">
-        <i class="fas fa-file-pdf" style="color: #dc2626;"></i> ดาวน์โหลด PDF
+      <button type="button" class="stock-action-btn pdf" id="btnDownloadMonthlyPdf" onclick="triggerStockPdf()" disabled>
+        <i class="fas fa-file-pdf"></i> ดาวน์โหลด PDF
       </button>
     </div>
 
-    <!-- ส่วนที่ 3: ตารางรายการอะไหล่และยอดคงเหลือ -->
+<!-- ส่วนที่ 3: ตารางรายการอะไหล่และยอดคงเหลือ -->
 <!-- [ANCHOR: STOCK-TABLE-CARD-HEADER] -->
-<div class="card">
-  <div class="table-header-flex">
-    <h2 class="header-title" style="margin: 0; color: #1f2937;"><i class="fas fa-list"></i> ทะเบียนอะไหล่และยอดคงเหลือ</h2>
+<div class="card stock-panel stock-table-panel">
+  <div class="table-header-flex stock-panel-head stock-table-title">
+    <h2 class="header-title"><i class="fas fa-list"></i> ทะเบียนอะไหล่และยอดคงเหลือ</h2>
     <div>
-      <input type="text" id="searchStock" class="search-input" placeholder="🔍 ค้นหา รหัส, ชื่อ, หมวดหมู่..." onkeyup="filterStockTable()" aria-label="ค้นหาข้อมูลอะไหล่">
+      <input type="text" id="searchStock" class="search-input ui-input" placeholder="ค้นหา รหัส, ชื่อ, หมวดหมู่..." onkeyup="filterStockTable()" aria-label="ค้นหาข้อมูลอะไหล่">
     </div>
   </div>
 
@@ -843,7 +1447,7 @@ document.addEventListener('DOMContentLoaded', function() {
           setSubmitState(transForm, false);
           showAlert('error', err && err.message ? err.message : 'เกิดข้อผิดพลาดในการบันทึกรายการ');
         })
-        .saveStockTransaction(payload);
+        .processStockTransaction(payload);
     });
   }
 });
@@ -1017,6 +1621,8 @@ function confirmDeletePart() {
     setLoading(false);
     if(res.success) { showAlert('success', 'ลบสำเร็จ'); loadPartsData(); }
     else { showAlert('error', res.error); }
+  }).withFailureHandler(function(){
+    setLoading(false);
   }).deleteSparePartRow(id);
 }
 
@@ -1096,7 +1702,7 @@ function renderStockTablePage() {
   if (!tbody) return;
 
   if (!filteredStockData || filteredStockData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #6b7280; padding: 2rem;">ไม่มีข้อมูลอะไหล่ในระบบ</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="stock-empty-state">ไม่มีข้อมูลอะไหล่ในระบบ</td></tr>';
     if (pagination) pagination.style.display = 'none';
     return;
   }
@@ -1123,22 +1729,22 @@ function renderStockTablePage() {
     var tr = document.createElement('tr');
     if (isLow) tr.className = 'row-low-stock';
 
-    var badge = isLow ? '<span class="badge-low">⚠ ใกล้หมด</span>' : '<span class="badge-ok">ปกติ</span>';
+    var badge = isLow ? '<span class="badge-low">ต่ำกว่าขั้นต่ำ</span>' : '<span class="badge-ok">พร้อมใช้งาน</span>';
 
     var actionButtons = 
-      '<td style="white-space: nowrap; width: 1%;">' +
-        '<div style="display: flex; gap: 0.5rem; justify-content: center;">' +
-          '<button type="button" class="action-icon-btn edit" onclick="editPart(\''+item.partId+'\', \''+item.partName+'\', \''+item.category+'\', \''+item.unit+'\', \''+item.reorderPoint+'\')" title="แก้ไขข้อมูล"><i class="fas fa-edit"></i></button>' +
-          '<button type="button" class="action-icon-btn delete" onclick="deletePart(\''+item.partId+'\', \''+item.partName+'\')" title="ลบข้อมูล"><i class="fas fa-trash-alt"></i></button>' +
+      '<td data-label="จัดการ">' +
+        '<div style="display: flex; gap: 0.5rem; justify-content: flex-start;">' +
+          '<button type="button" class="stock-edit-btn" onclick="editPart(\''+item.partId+'\', \''+item.partName+'\', \''+item.category+'\', \''+item.unit+'\', \''+item.reorderPoint+'\')" title="แก้ไขข้อมูล"><i class="fas fa-edit"></i> แก้ไข</button>' +
+          '<button type="button" class="stock-delete-btn" onclick="deletePart(\''+item.partId+'\', \''+item.partName+'\')" title="ลบข้อมูล"><i class="fas fa-trash-alt"></i> ลบ</button>' +
         '</div>' +
       '</td>';
 
     tr.innerHTML =
-      '<td>' + item.partId + '</td>' +
-      '<td>' + item.partName + '</td>' +
-      '<td>' + item.category + '</td>' +
-      '<td><b>' + balance + '</b> ' + item.unit + '</td>' +
-      '<td>' + badge + '</td>' +
+      '<td data-label="รหัสอะไหล่"><span class="code">' + item.partId + '</span></td>' +
+      '<td data-label="ชื่ออะไหล่"><span class="cell-clamp">' + item.partName + '</span><small>หน่วย: ' + item.unit + '</small></td>' +
+      '<td data-label="หมวดหมู่">' + item.category + '</td>' +
+      '<td data-label="คงเหลือ"><b>' + balance + '</b> ' + item.unit + '</td>' +
+      '<td data-label="สถานะ">' + badge + '</td>' +
       actionButtons;
 
     tbody.appendChild(tr);
@@ -1245,6 +1851,10 @@ document.addEventListener('DOMContentLoaded', function() {
         sel.innerHTML += '<option value="'+m.yearBE+'-'+m.month+'">'+m.label+'</option>';
       });
     } else { sel.innerHTML = '<option value="">ไม่พบข้อมูลรายงาน</option>'; }
+  }).withFailureHandler(function(err) {
+    var sel = document.getElementById('reportMonthSelect');
+    if (sel) sel.innerHTML = '<option value="">โหลดข้อมูลรายงานไม่สำเร็จ</option>';
+    showAlert('error', err && err.message ? err.message : 'โหลดข้อมูลรายงานไม่สำเร็จ');
   }).getAvailableStockReportMonths();
 });
 

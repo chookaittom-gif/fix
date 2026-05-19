@@ -91,6 +91,46 @@
             background: #f8fafc;
         }
 
+        .password-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .password-toggle-btn {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #6b7280;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            min-width: 36px;
+            min-height: 36px;
+        }
+
+        .password-toggle-btn:hover {
+            color: #4f46e5;
+            background: rgba(79, 70, 229, 0.1);
+        }
+
+        .password-toggle-btn:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+        }
+
+        .form-input.password-field {
+            padding-right: 50px;
+        }
+
         .form-input:focus {
             outline: none;
             border-color: #4f46e5;
@@ -251,22 +291,161 @@
         }
 
         .forgot-password {
-            text-align: center;
-            margin-top: 1rem;
-            padding-top: 1rem;
+            margin: 0.2rem 0 1rem;
+            padding-top: 0.95rem;
             border-top: 1px solid #e5e7eb;
         }
 
         .forgot-password a {
+            min-height: 46px;
+            width: 100%;
             color: #4f46e5;
             text-decoration: none;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
+            font-size: 0.96rem;
+            font-weight: 700;
+            border: 1px solid rgba(79, 70, 229, 0.18);
+            border-radius: 12px;
+            background: #f5f3ff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.55rem;
+            box-shadow: 0 8px 18px rgba(79, 70, 229, 0.08);
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        .forgot-password a i {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #ede9fe;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
         }
 
         .forgot-password a:hover {
             color: #3730a3;
-            text-decoration: underline;
+            background: #ede9fe;
+            border-color: rgba(79, 70, 229, 0.36);
+            box-shadow: 0 10px 24px rgba(79, 70, 229, 0.14);
+            transform: translateY(-1px);
+        }
+
+        .forgot-password a:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.16);
+        }
+
+        .reset-modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(17, 24, 39, 0.58);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            z-index: 2000;
+        }
+
+        .reset-modal-backdrop.show {
+            display: flex;
+        }
+
+        .reset-modal {
+            width: min(440px, 100%);
+            background: #f9fafb;
+            border-radius: 18px;
+            box-shadow: 0 24px 70px rgba(17, 24, 39, 0.22);
+            overflow: hidden;
+            border: 1px solid rgba(79, 70, 229, 0.14);
+        }
+
+        .reset-modal-header {
+            padding: 1.25rem 1.5rem 1rem;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: #f8fafc;
+            display: flex;
+            gap: 0.9rem;
+            align-items: flex-start;
+        }
+
+        .reset-modal-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            background: rgba(248, 250, 252, 0.18);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+        }
+
+        .reset-modal-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin: 0 0 0.25rem;
+        }
+
+        .reset-modal-text {
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin: 0;
+            color: rgba(248, 250, 252, 0.86);
+        }
+
+        .reset-modal-body {
+            padding: 1.4rem 1.5rem 1.5rem;
+        }
+
+        .reset-modal-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-top: 1.25rem;
+        }
+
+        .reset-btn {
+            min-height: 46px;
+            border: none;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 0.98rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+        }
+
+        .reset-btn-primary {
+            color: #f8fafc;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            box-shadow: 0 10px 22px rgba(79, 70, 229, 0.24);
+        }
+
+        .reset-btn-secondary {
+            color: #374151;
+            background: #e5e7eb;
+        }
+
+        .reset-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+        }
+
+        .reset-btn:disabled {
+            opacity: 0.62;
+            cursor: not-allowed;
+        }
+
+        .reset-help {
+            margin-top: 0.8rem;
+            color: #6b7280;
+            font-size: 0.82rem;
+            line-height: 1.45;
         }
 
         @media (max-width: 550px) {
@@ -399,8 +578,14 @@
                     <i class="fas fa-lock"></i>
                     รหัสผ่าน
                 </label>
-                <input type="password" id="password" name="password" class="form-input" required 
-                       placeholder="กรอกรหัสผ่าน" autocomplete="current-password">
+                <div class="password-input-wrapper">
+                    <input type="password" id="password" name="password" class="form-input password-field" required 
+                           placeholder="กรอกรหัสผ่าน" autocomplete="current-password">
+                    <button type="button" class="password-toggle-btn" id="passwordToggleBtn" 
+                            aria-label="แสดง/ซ่อนรหัสผ่าน" tabindex="0">
+                        <i class="fas fa-eye" id="passwordToggleIcon"></i>
+                    </button>
+                </div>
             </div>
 
             <button type="submit" class="login-btn" id="loginBtn">
@@ -417,9 +602,9 @@
 
         <!-- Forgot Password -->
         <div class="forgot-password">
-            <a href="javascript:void(0)" onclick="showForgotPasswordInfo()">
-                <i class="fas fa-question-circle"></i>
-                ลืมรหัสผ่าน?
+            <a href="javascript:void(0)" id="forgotPasswordLink" onclick="openResetPasswordModal()">
+                <i class="fas fa-key"></i>
+                รีเซ็ตรหัสผ่าน
             </a>
         </div>
 
@@ -429,11 +614,51 @@
         </button>
     </div>
 
+    <div class="reset-modal-backdrop" id="resetPasswordModal" aria-hidden="true">
+        <div class="reset-modal" role="dialog" aria-modal="true" aria-labelledby="resetModalTitle">
+            <div class="reset-modal-header">
+                <div class="reset-modal-icon">
+                    <i class="fas fa-key"></i>
+                </div>
+                <div>
+                    <h2 class="reset-modal-title" id="resetModalTitle">รีเซ็ตรหัสผ่าน</h2>
+                    <p class="reset-modal-text">ระบบจะส่งรหัสผ่านชั่วคราวไปยัง email ที่ลงทะเบียนไว้</p>
+                </div>
+            </div>
+            <form class="reset-modal-body" id="resetPasswordForm">
+                <div class="form-group">
+                    <label for="resetUsername" class="form-label">
+                        <i class="fas fa-user"></i>
+                        ชื่อผู้ใช้
+                    </label>
+                    <input type="text" id="resetUsername" class="form-input" autocomplete="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="resetEmail" class="form-label">
+                        <i class="fas fa-envelope"></i>
+                        Email ที่ลงทะเบียน
+                    </label>
+                    <input type="email" id="resetEmail" class="form-input" autocomplete="email" required>
+                </div>
+                <p class="reset-help">หากข้อมูลตรงกับบัญชีที่ใช้งานอยู่ ระบบจะส่งรหัสผ่านใหม่ให้ทาง email</p>
+                <div class="reset-modal-actions">
+                    <button type="button" class="reset-btn reset-btn-secondary" id="resetCancelBtn">
+                        ยกเลิก
+                    </button>
+                    <button type="submit" class="reset-btn reset-btn-primary" id="resetSubmitBtn">
+                        <i class="fas fa-paper-plane"></i>
+                        ส่งรหัสใหม่
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer style="position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); padding: 1rem 0; border-top: 1px solid rgba(255, 255, 255, 0.2); z-index: 1000;">
         <div style="text-align: center; color: #6b7280;">
             <p style="margin: 0; font-size: 0.8rem;">
-                © 2025 ระบบแจ้งซ่อมออนไลน์ มหาวิทยาลัยสวนดุสิต ศูนย์การศึกษาลำปาง | พัฒนาโดย ชูเกียรติ กุศลสถิตย์
+                © 2026 ระบบแจ้งซ่อมออนไลน์ มหาวิทยาลัยสวนดุสิต ศูนย์การศึกษาลำปาง | พัฒนาโดย ชูเกียรติ กุศลสถิตย์
             </p>
         </div>
     </footer>
@@ -570,12 +795,18 @@ function goBack() {
 // ฟังก์ชัน handleLoginSubmit (ตรวจสอบว่าเหมือนเดิม)
 document.getElementById('loginForm').addEventListener('submit', function(e) {
     e.preventDefault();
+    const loginForm = e.currentTarget;
+    if (loginForm.dataset.submitting === '1') return;
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
     if (!username || !password) {
         showAlert('error', 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
         return;
     }
+    if (!validateLoginInput(username, password)) {
+        return;
+    }
+    loginForm.dataset.submitting = '1';
     toggleLoading(true);
     google.script.run
         .withSuccessHandler(function(result) {
@@ -583,12 +814,14 @@ document.getElementById('loginForm').addEventListener('submit', function(e) {
             if (result && result.success) {
                 handleLoginSuccess(result);
             } else {
+                loginForm.dataset.submitting = '0';
                 toggleLoading(false);
                 showAlert('error', result.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
                 document.getElementById('password').value = '';
             }
         })
         .withFailureHandler(function(error) {
+            loginForm.dataset.submitting = '0';
             toggleLoading(false);
             showAlert('error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error.message);
             console.error('Login error:', error);
@@ -637,8 +870,79 @@ document.getElementById('loginForm').addEventListener('submit', function(e) {
             }
         }
 
-        function showForgotPasswordInfo() {
-            showAlert('info', 'กรุณาติดต่อผู้ดูแลระบบหรือหน่วย IT เพื่อขอรีเซ็ตรหัสผ่าน โทร: 054-2208019 หรือ email: chookait_kus@dusit.ac.th');
+        let forgotPasswordBusy = false;
+        let forgotPasswordRequestToken = 0;
+
+        function openResetPasswordModal() {
+            if (forgotPasswordBusy) return;
+            const modal = document.getElementById('resetPasswordModal');
+            const resetUsername = document.getElementById('resetUsername');
+            const username = document.getElementById('username').value.trim();
+            resetUsername.value = username;
+            modal.classList.add('show');
+            modal.setAttribute('aria-hidden', 'false');
+            setTimeout(() => (username ? document.getElementById('resetEmail') : resetUsername).focus(), 30);
+        }
+
+        function closeResetPasswordModal() {
+            if (forgotPasswordBusy) return;
+            const modal = document.getElementById('resetPasswordModal');
+            modal.classList.remove('show');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
+        function setForgotPasswordLoading(show) {
+            const link = document.getElementById('forgotPasswordLink');
+            const submitBtn = document.getElementById('resetSubmitBtn');
+            const cancelBtn = document.getElementById('resetCancelBtn');
+            const resetInputs = document.querySelectorAll('#resetPasswordForm .form-input');
+            forgotPasswordBusy = show;
+            if (link) {
+                link.style.pointerEvents = show ? 'none' : 'auto';
+                link.style.opacity = show ? '0.55' : '1';
+            }
+            resetInputs.forEach(input => { input.disabled = show; });
+            if (cancelBtn) cancelBtn.disabled = show;
+            if (submitBtn) {
+                submitBtn.disabled = show;
+                submitBtn.innerHTML = show ? '<div class="spinner"></div>กำลังส่ง...' : '<i class="fas fa-paper-plane"></i>ส่งรหัสใหม่';
+            }
+        }
+
+        function submitPasswordReset(e) {
+            e.preventDefault();
+            if (forgotPasswordBusy) return;
+
+            const username = document.getElementById('resetUsername').value.trim();
+            const email = document.getElementById('resetEmail').value.trim();
+            if (!username || !email) {
+                showAlert('error', 'กรุณากรอกชื่อผู้ใช้และ email');
+                return;
+            }
+
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                showAlert('error', 'รูปแบบ email ไม่ถูกต้อง');
+                return;
+            }
+
+            const requestToken = ++forgotPasswordRequestToken;
+            setForgotPasswordLoading(true);
+            showAlert('info', 'กำลังส่งคำขอรีเซ็ตรหัสผ่าน...');
+
+            google.script.run
+                .withSuccessHandler(function(result) {
+                    if (requestToken !== forgotPasswordRequestToken) return;
+                    setForgotPasswordLoading(false);
+                    closeResetPasswordModal();
+                    showAlert((result && result.success) ? 'success' : 'error', (result && result.message) || 'ไม่สามารถดำเนินการรีเซ็ตรหัสผ่านได้ในขณะนี้');
+                })
+                .withFailureHandler(function(error) {
+                    if (requestToken !== forgotPasswordRequestToken) return;
+                    setForgotPasswordLoading(false);
+                    showAlert('error', 'เกิดข้อผิดพลาดในการรีเซ็ตรหัสผ่าน: ' + error.message);
+                    console.error('Password reset error:', error);
+                })
+                .requestPasswordReset(username, email);
         }
 
         function showAlert(type, message) {
@@ -704,6 +1008,22 @@ document.getElementById('loginForm').addEventListener('submit', function(e) {
             return input.replace(/[<>'";&]/g, '');
         }
 
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('password');
+            const toggleIcon = document.getElementById('passwordToggleIcon');
+            const toggleBtn = document.getElementById('passwordToggleBtn');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.className = 'fas fa-eye-slash';
+                toggleBtn.setAttribute('aria-label', 'ซ่อนรหัสผ่าน');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.className = 'fas fa-eye';
+                toggleBtn.setAttribute('aria-label', 'แสดงรหัสผ่าน');
+            }
+        }
+
         function initMobileRuntime() {
   const setVH = () => {
     document.documentElement.style.setProperty('--app-vh', `${window.innerHeight * 0.01}px`);
@@ -716,7 +1036,29 @@ document.getElementById('loginForm').addEventListener('submit', function(e) {
   window.addEventListener('orientationchange', setVH, { passive: true });
 }
 
-document.addEventListener('DOMContentLoaded', initMobileRuntime);
+document.addEventListener('DOMContentLoaded', () => {
+    initMobileRuntime();
+    checkExistingLogin();
+    document.getElementById('resetPasswordForm').addEventListener('submit', submitPasswordReset);
+    document.getElementById('resetCancelBtn').addEventListener('click', closeResetPasswordModal);
+    document.getElementById('resetPasswordModal').addEventListener('click', function(e) {
+        if (e.target === this) closeResetPasswordModal();
+    });
+    
+    // Initialize password toggle functionality
+    const passwordToggleBtn = document.getElementById('passwordToggleBtn');
+    if (passwordToggleBtn) {
+        passwordToggleBtn.addEventListener('click', togglePasswordVisibility);
+        
+        // Support keyboard interaction
+        passwordToggleBtn.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                togglePasswordVisibility();
+            }
+        });
+    }
+});
     </script>
 </body>
 </html>
