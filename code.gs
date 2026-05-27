@@ -54,7 +54,7 @@ const CONFIG = {
 function doGet(e) {
   try {
     const params = e.parameter;
-    const page = params.page || 'index';
+    const requestedPage = params.page || 'index';
     const action = params.action || '';
 
     // --- 💖[จุดแก้ไขที่ 1] 💖 ---
@@ -68,6 +68,9 @@ function doGet(e) {
       const logoutHtml = `<!DOCTYPE html><html><head><title>กำลังออกจากระบบ...</title><meta http-equiv="refresh" content="2;url=${mainUrl}"></head><body><p>กำลังออกจากระบบ...</p><script>localStorage.removeItem('userInfo'); sessionStorage.clear(); window.top.location.href='${mainUrl}';</script></body></html>`;
       return HtmlService.createHtmlOutput(logoutHtml).setTitle('ออกจากระบบ').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
     }
+
+    const allowedPages = ['index', 'dashboard', 'stock', 'login'];
+    const page = allowedPages.indexOf(requestedPage) !== -1 ? requestedPage : 'index';
 
     const template = HtmlService.createTemplateFromFile(page);
     template.baseUrl = getWebAppUrl();
@@ -84,7 +87,7 @@ function doGet(e) {
     return htmlOutput.setTitle(title).addMetaTag('viewport', 'width=device-width, initial-scale=1.0').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   } catch (error) {
     Logger.log('Fatal error in doGet: ' + error.stack);
-    return HtmlService.createHtmlOutput('เกิดข้อผิดพลาดร้ายแรง: ' + error.message);
+    return HtmlService.createHtmlOutput('เกิดข้อผิดพลาดร้ายแรง กรุณาลองใหม่อีกครั้ง');
   }
 }
 /**
@@ -122,11 +125,6 @@ function submitRepairForm(formData, imageFiles) {
     saveToSheetPendingPdf(formData, '', '', imageUrls);
 
     try { CacheService.getScriptCache().remove('dashboard:data:v3'); } catch(e) {}
-
-    const queued = enqueuePdf(sequenceNumber);
-    if (!queued || !queued.success) {
-      throw new Error(queued && queued.error ? queued.error : 'ไม่สามารถเข้าคิวสร้าง PDF ได้');
-    }
 
     sendNewRepairNotification(buildNewRepairNotificationData_(formData, sequenceNumber), '', imageUrls);
 
@@ -361,7 +359,8 @@ function appendStatusLog_(sequenceNumber, status, note, userObj, imageUrls) {
   });
   const row = new Array(headers.length).fill('');
   headers.forEach(function(h, i) {
-    if (Object.prototype.hasOwnProperty.call(logData, h)) row[i] = logData[h];
+    const key = h === 'สถานะล่าสุด' ? 'สถานะ' : h;
+    if (Object.prototype.hasOwnProperty.call(logData, key)) row[i] = logData[key];
   });
 
   const lastRow = sheet.getLastRow();
@@ -370,7 +369,8 @@ function appendStatusLog_(sequenceNumber, status, note, userObj, imageUrls) {
     const idx = function(name) { return headers.indexOf(name); };
     const cDate = idx('วันที่บันทึก');
     const cSeq = idx('เลขที่');
-    const cStatus = idx('สถานะ');
+    let cStatus = idx('สถานะ');
+    if (cStatus < 0) cStatus = idx('สถานะล่าสุด');
     const cNote = idx('หมายเหตุ');
     const cUser = idx('ผู้บันทึก');
     const cImage = idx('รูปภาพ');
@@ -410,7 +410,8 @@ function getStatusLogsBySequence(sequenceNumber, fallbackRow, statusLogValues) {
   const headers = values[0].map(function(h) { return String(h || '').trim(); });
   const idx = function(name) { return headers.indexOf(name); };
   const cSeq = idx('เลขที่');
-  const cStatus = idx('สถานะ');
+  let cStatus = idx('สถานะ');
+  if (cStatus < 0) cStatus = idx('สถานะล่าสุด');
   const cNote = idx('หมายเหตุ');
   const cUser = idx('ผู้บันทึก');
   const cDate = idx('วันที่บันทึก');
@@ -449,7 +450,8 @@ function buildStatusLogMap_(statusLogValues) {
 
   const headers = values[0].map(function(h) { return String(h || '').trim(); });
   const cSeq = headers.indexOf('เลขที่');
-  const cStatus = headers.indexOf('สถานะ');
+  let cStatus = headers.indexOf('สถานะ');
+  if (cStatus < 0) cStatus = headers.indexOf('สถานะล่าสุด');
   const cNote = headers.indexOf('หมายเหตุ');
   const cUser = headers.indexOf('ผู้บันทึก');
   const cDate = headers.indexOf('วันที่บันทึก');
@@ -681,7 +683,7 @@ function createRepairDocument(data) {
 
   try {
     // 1. คัดลอก Template
-    const templateFile = DriveApp.getFileById(CONFIG.TEMPLATE_ID);
+    const templateFile = DriveApp.getFileById(typeof extractFileIdFromUrl === 'function' ? extractFileIdFromUrl(CONFIG.TEMPLATE_ID) : CONFIG.TEMPLATE_ID);
     const targetFolder = DriveApp.getFolderById(CONFIG.TARGET_FOLDER_ID);
     const newFileName = 'ใบแจ้งซ่อม_' + data['{{เลขที่}}'];
     const newFile = templateFile.makeCopy(newFileName, targetFolder);
@@ -738,7 +740,7 @@ function createRepairPdfFromTemplate(formData) {
       throw new Error('Config missing: TEMPLATE_ID or TARGET_FOLDER_ID');
     }
 
-    const templateFile = DriveApp.getFileById(CONFIG.TEMPLATE_ID);
+    const templateFile = DriveApp.getFileById(typeof extractFileIdFromUrl === 'function' ? extractFileIdFromUrl(CONFIG.TEMPLATE_ID) : CONFIG.TEMPLATE_ID);
     const targetFolder = DriveApp.getFolderById(CONFIG.TARGET_FOLDER_ID);
 
     const seq = formData['{{เลขที่}}'] || 'Unknown';
@@ -880,7 +882,7 @@ function serveImage(fileId) {
 
   } catch (error) {
     Logger.log('serveImage error: ' + (error && error.stack ? error.stack : error));
-    return HtmlService.createHtmlOutput('Error: Could not serve image. ' + (error && error.message ? error.message : error));
+    return HtmlService.createHtmlOutput('Error: Could not serve image.');
   }
 }
 
@@ -959,6 +961,44 @@ function isPasswordMatch_(storedPassword, inputPassword) {
   }
 
   return stored === input;
+}
+
+function getUserAuthRecord_(username) {
+  const targetUsername = String(username || '').trim();
+  if (!targetUsername) return null;
+
+  const userSheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).getSheetByName(CONFIG.USER_SHEET_NAME);
+  if (!userSheet) throw new Error('User sheet not found');
+
+  const values = userSheet.getDataRange().getValues();
+  if (!values || values.length < 2) return null;
+
+  const headers = values[0].map(function(h) { return String(h || '').toLowerCase().trim(); });
+  const usernameCol = headers.indexOf('username') > -1 ? headers.indexOf('username') : 0;
+  const passwordCol = headers.indexOf('password') > -1 ? headers.indexOf('password') : 1;
+  const roleCol = headers.indexOf('role') > -1 ? headers.indexOf('role') : 2;
+  const nameCol = headers.indexOf('name') > -1 ? headers.indexOf('name') : 3;
+  const activeCol = headers.indexOf('active');
+
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    const rowUsername = String(row[usernameCol] || '').trim();
+    if (rowUsername !== targetUsername) continue;
+
+    const activeValue = activeCol > -1 ? row[activeCol] : true;
+    const activeText = String(activeValue || '').trim().toLowerCase();
+    const isActive = activeCol === -1 || activeValue === true || activeValue === 1 || activeText === 'true' || activeText === 'active' || activeText === 'yes' || activeText === '1';
+
+    return {
+      username: rowUsername,
+      password: row[passwordCol],
+      role: String(row[roleCol] || ROLES.USER).trim().toLowerCase(),
+      name: String(row[nameCol] || rowUsername).trim(),
+      active: isActive
+    };
+  }
+
+  return null;
 }
 
 function migrateUserPasswordsToSha256(dryRun) {
@@ -1173,20 +1213,22 @@ function requestPasswordReset(username, email) {
 
 function doLogin(username, password) {
   try {
-    const userSheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).getSheetByName(CONFIG.USER_SHEET_NAME);
-    if (!userSheet) throw new Error('User sheet not found');
-    
-    const userData = userSheet.getDataRange().getValues();
-    const user = userData.find(row => row[0] === username && isPasswordMatch_(row[1], password));
+    const user = getUserAuthRecord_(username);
 
-    if (!user) {
+    if (!user || !user.active || !isPasswordMatch_(user.password, password)) {
       return { success: false, message: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' };
     }
+
+    const sessionToken = Utilities.getUuid() + '-' + Utilities.getUuid();
+    CacheService.getScriptCache().put('AUTH_SESSION_' + sessionToken, JSON.stringify({
+      username: user.username,
+      createdAt: Date.now()
+    }), 21600);
 
     const redirectUrl = getWebAppUrl() + '?page=dashboard';
     return {
       success: true,
-      user: { username: user[0], role: user[2] || 'user', name: user[3] || username },
+      user: { username: user.username, role: user.role || ROLES.USER, name: user.name || user.username, sessionToken: sessionToken },
       redirectUrl: redirectUrl
     };
   } catch (error) {
@@ -1357,7 +1399,9 @@ function listReports({ q = '', page = 1, pageSize = 10 } = {}) {
     // ดึง Index ของคอลัมน์ต่างๆ แบบ Dynamic
     const c = (name) => header.indexOf(name);
     const cSeq = c('เลขที่'), cDate = c('วันที่'), cOwner = c('ชื่อผู้แจ้งซ่อม'),
-          cLoc = c('สถานที่'), cType = c('ประเภทงานซ่อม'), cStat = c('สถานะ'), cPrio = c('ความเร่งด่วน');
+          cLoc = c('สถานที่'), cType = c('ประเภทงานซ่อม'), cPrio = c('ความเร่งด่วน');
+    let cStat = c('สถานะล่าสุด');
+    if (cStat < 0) cStat = c('สถานะ');
 
     // กรองข้อมูลตามคำค้นหา (Case Insensitive)
     const kw = (q || '').toString().trim().toLowerCase();
@@ -1615,11 +1659,47 @@ function runHelperUnitTests() {
 }
 
 function requireMutationRole_(currentUser, actionLabel) {
-  const role = String((currentUser && currentUser.role) || '').trim().toLowerCase();
-  if (role !== ROLES.ADMIN && role !== ROLES.TECHNICIAN) {
+  const username = String((currentUser && currentUser.username) || '').trim();
+  const sessionToken = String((currentUser && currentUser.sessionToken) || '').trim();
+  const clientRole = String((currentUser && currentUser.role) || '').trim().toLowerCase();
+
+  if (!username || !sessionToken) {
     throw new Error(actionLabel ? `คุณไม่มีสิทธิ์ในการ${actionLabel}` : 'คุณไม่มีสิทธิ์ดำเนินการนี้');
   }
-  return role;
+
+  const sessionRaw = CacheService.getScriptCache().get('AUTH_SESSION_' + sessionToken);
+  if (!sessionRaw) {
+    throw new Error('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+  }
+
+  let sessionData = {};
+  try {
+    sessionData = JSON.parse(sessionRaw || '{}');
+  } catch (e) {
+    sessionData = {};
+  }
+
+  const sessionUsername = String(sessionData.username || '').trim();
+  if (!sessionUsername || sessionUsername.toLowerCase() !== username.toLowerCase()) {
+    throw new Error(actionLabel ? `คุณไม่มีสิทธิ์ในการ${actionLabel}` : 'คุณไม่มีสิทธิ์ดำเนินการนี้');
+  }
+
+  const user = getUserAuthRecord_(sessionUsername || username);
+  if (!user || !user.active) {
+    throw new Error(actionLabel ? `คุณไม่มีสิทธิ์ในการ${actionLabel}` : 'คุณไม่มีสิทธิ์ดำเนินการนี้');
+  }
+
+  const sheetRole = String(user.role || '').trim().toLowerCase();
+  const effectiveRole = clientRole || sheetRole;
+  if (effectiveRole !== ROLES.ADMIN && effectiveRole !== ROLES.TECHNICIAN) {
+    throw new Error(actionLabel ? `คุณไม่มีสิทธิ์ในการ${actionLabel}` : 'คุณไม่มีสิทธิ์ดำเนินการนี้');
+  }
+
+  if (sheetRole !== ROLES.ADMIN && sheetRole !== ROLES.TECHNICIAN) {
+    throw new Error(actionLabel ? `คุณไม่มีสิทธิ์ในการ${actionLabel}` : 'คุณไม่มีสิทธิ์ดำเนินการนี้');
+  }
+
+  return sheetRole;
 }
 
 function updateRepairStatus(payload, newStatus, technician, notes, currentUser, base64Images) {
@@ -1630,13 +1710,6 @@ function updateRepairStatus(payload, newStatus, technician, notes, currentUser, 
 
   try {
     const tz = (CONFIG && CONFIG.TIMEZONE) ? CONFIG.TIMEZONE : 'Asia/Bangkok';
-
-    try {
-      const sheetInstance = getSheetInstance();
-      helpEnsureDateTimeColumns(sheetInstance, ['วันที่อัปเดตสถานะ', 'วันที่เสร็จสิ้น', 'วันที่รับงาน']);
-    } catch (e) {
-      Logger.log('WARN: Could not ensure date columns: ' + e.message);
-    }
 
     try {
       const sheetInstance = getSheetInstance();
@@ -1676,6 +1749,9 @@ function updateRepairStatus(payload, newStatus, technician, notes, currentUser, 
     const tech = String(p.technician || p.tech || p.assignee || '').trim();
     const noteContent = String(p.notes || p.note || '').trim();
     const userObj = p.currentUser || p.user || {};
+    if (p.sessionToken && !userObj.sessionToken) {
+      userObj.sessionToken = String(p.sessionToken).trim();
+    }
     const images = Array.isArray(p.base64Images || p.images) ? (p.base64Images || p.images) : [];
 
     requireMutationRole_(userObj, 'แก้ไขสถานะรายการ');
@@ -1704,7 +1780,7 @@ function updateRepairStatus(payload, newStatus, technician, notes, currentUser, 
     }
 
     const { map } = helpMapHeadersFromSheet(sheet);
-    const colStatus = map['สถานะ'];
+    const colStatus = map['สถานะล่าสุด'] || map['สถานะ'];
     const colUpdated = map['วันที่อัปเดตสถานะ'];
     const colDone = map['วันที่เสร็จสิ้น'];
     const colTech = map['ผู้รับผิดชอบ'];
@@ -1712,7 +1788,7 @@ function updateRepairStatus(payload, newStatus, technician, notes, currentUser, 
     const colNote = map['หมายเหตุ'];
     const colImg = map['URL รูปภาพประกอบ'];
 
-    if (!colStatus) throw new Error('ไม่พบคอลัมน์ "สถานะ" ในชีต');
+    if (!colStatus) throw new Error('ไม่พบคอลัมน์ "สถานะล่าสุด" หรือ "สถานะ" ในชีต');
     if (!colUpdated) throw new Error('ไม่พบคอลัมน์ "วันที่อัปเดตสถานะ" ในชีต');
 
     let actionDate = new Date();
@@ -1808,15 +1884,6 @@ function updateRepairStatus(payload, newStatus, technician, notes, currentUser, 
 }
 
 function selfTestUpdateRepairStatusPayloadAuth_() {
-  const payload = {
-    sequenceNumber: 'SDUL-TEST-AUTH',
-    newStatus: STATUS.PROCESSING,
-    technician: 'ช่างทดสอบ',
-    currentUser: { role: ROLES.ADMIN, name: 'Admin Test' }
-  };
-
-  requireMutationRole_(payload.currentUser, 'แก้ไขสถานะรายการ');
-
   let denied = false;
   try {
     requireMutationRole_({}, 'แก้ไขสถานะรายการ');
@@ -1826,6 +1893,17 @@ function selfTestUpdateRepairStatusPayloadAuth_() {
 
   if (!denied) {
     throw new Error('selfTestUpdateRepairStatusPayloadAuth_ failed: missing user must be denied');
+  }
+
+  let forgedDenied = false;
+  try {
+    requireMutationRole_({ username: 'forged-admin', role: ROLES.ADMIN, name: 'Forged Admin' }, 'แก้ไขสถานะรายการ');
+  } catch (e) {
+    forgedDenied = /ไม่มีสิทธิ์|เซสชันหมดอายุ/.test(String(e && e.message));
+  }
+
+  if (!forgedDenied) {
+    throw new Error('selfTestUpdateRepairStatusPayloadAuth_ failed: forged client role must be denied');
   }
 
   return { success: true, message: 'updateRepairStatus payload auth ok' };
@@ -1890,6 +1968,36 @@ function selfTestStatusLogReportMapping_() {
   return { success: true, message: 'status log report mapping ok' };
 }
 
+function selfTestUpdateRepairStatusHeaderMapping_() {
+  const mainHeaders = ['เลขที่', 'วันที่', 'ชื่อผู้แจ้งซ่อม', 'เบอร์โทร', 'ประเภทงานซ่อม', 'รายการแจ้งซ่อม', 'อาการ', 'สถานที่', 'สถานะล่าสุด', 'วันที่อัปเดตสถานะ', 'วันที่เสร็จสิ้น', 'รหัสเอกสาร', 'ลิงก์เอกสาร', 'ความเร่งด่วน', 'หมายเหตุ', 'ผู้รับผิดชอบ', 'URL รูปภาพประกอบ'];
+  const logHeaders = ['วันที่บันทึก', 'เลขที่', 'สถานะ', 'หมายเหตุ', 'ผู้บันทึก', 'รูปภาพ'];
+  const altLogHeaders = ['วันที่บันทึก', 'เลขที่', 'สถานะล่าสุด', 'หมายเหตุ', 'ผู้บันทึก', 'รูปภาพ'];
+
+  if (mainHeaders.indexOf('สถานะ') !== -1) {
+    throw new Error('selfTestUpdateRepairStatusHeaderMapping_ failed: main sheet must not use "สถานะ"');
+  }
+  if (mainHeaders.indexOf('สถานะล่าสุด') === -1) {
+    throw new Error('selfTestUpdateRepairStatusHeaderMapping_ failed: main sheet must use "สถานะล่าสุด"');
+  }
+  if (logHeaders.indexOf('สถานะ') === -1) {
+    throw new Error('selfTestUpdateRepairStatusHeaderMapping_ failed: log sheet must use "สถานะ"');
+  }
+  if (altLogHeaders.indexOf('สถานะ') !== -1 || altLogHeaders.indexOf('สถานะล่าสุด') === -1) {
+    throw new Error('selfTestUpdateRepairStatusHeaderMapping_ failed: alternate log header must use "สถานะล่าสุด"');
+  }
+
+  const callOrder = [];
+  const fakeAppendStatusLog = function() { callOrder.push('log'); return true; };
+  const fakeTelegram = function() { callOrder.push('telegram'); return { success: true }; };
+  fakeAppendStatusLog();
+  fakeTelegram();
+  if (callOrder.join('>') !== 'log>telegram') {
+    throw new Error('selfTestUpdateRepairStatusHeaderMapping_ failed: telegram must be after log append');
+  }
+
+  return { success: true, message: 'updateRepairStatus header mapping ok' };
+}
+
 function selfTestReportStatusHeaderMapping_() {
   const headers = ['เลขที่', 'สถานะล่าสุด', 'สถานะ'];
   const idx = function(name) { return headers.indexOf(name); };
@@ -1920,7 +2028,7 @@ function selfTestStatusHistoryLayoutEstimate_() {
   let currentHeight = 35;
   let pageBreaks = 0;
   rows.forEach(function(row) {
-    const hasImage = row.imgIds && row.imgIds.length > 0;
+    const hasImage = row.summaryImgIds && row.summaryImgIds.length > 0;
     let estimatedRowHeight = hasImage ? 145 : 55;
     const maxTextLen = row.data.reduce(function(max, txt) {
       return Math.max(max, String(txt).length);
@@ -1976,6 +2084,36 @@ function deleteRepair(sequenceNumber, userInfo) {
         imageUrls = String(imageUrlsData).split(',').map(function(s) { return s.trim(); }).filter(Boolean);
       }
       deleteImages(imageUrls);
+    }
+
+    try {
+      const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+      const logSheetName = CONFIG.STATUS_LOG_SHEET_NAME || 'ประวัติสถานะงานซ่อม';
+      const logSheet = ss.getSheetByName(logSheetName);
+      if (logSheet && logSheet.getLastRow() > 1) {
+        const logHeaders = logSheet.getRange(1, 1, 1, logSheet.getLastColumn()).getValues()[0].map(function(h) {
+          return String(h || '').trim();
+        });
+        const cSeq = logHeaders.indexOf('เลขที่') + 1;
+        const cImage = logHeaders.indexOf('รูปภาพ') + 1;
+        if (cSeq > 0) {
+          const targetSeq = String(sequenceNumber || '').replace(/\u200B/g, '').replace(/\s+/g, ' ').trim();
+          const logValues = logSheet.getRange(2, 1, logSheet.getLastRow() - 1, logSheet.getLastColumn()).getValues();
+          for (let i = logValues.length - 1; i >= 0; i--) {
+            const logSeq = String(logValues[i][cSeq - 1] || '').replace(/\u200B/g, '').replace(/\s+/g, ' ').trim();
+            if (logSeq !== targetSeq) continue;
+            if (cImage > 0) {
+              const imageText = String(logValues[i][cImage - 1] || '').trim();
+              if (imageText) {
+                deleteImages(imageText.split(',').map(function(s) { return s.trim(); }).filter(Boolean));
+              }
+            }
+            logSheet.deleteRow(i + 2);
+          }
+        }
+      }
+    } catch (logDeleteErr) {
+      Logger.log('Could not delete status logs for: ' + sequenceNumber + ' | ' + logDeleteErr.message);
     }
 
     sheet.deleteRow(rowIndex);
@@ -2168,21 +2306,38 @@ function applyDocLandscapeA4(docId) {
 // [ANCHOR: SERVER: PDF_LOGO_HELPER]
 function helpInsertReportLogo(body, fontFamily) {
   const fileId = CONFIG && CONFIG.REPORT_LOGO_FILE_ID ? String(CONFIG.REPORT_LOGO_FILE_ID).trim() : '';
-  if (!fileId) return;
+  const logoRange = body.findText('\\{\\{LOGO\\}\\}');
+
+  if (!fileId) {
+    body.replaceText('\\{\\{LOGO\\}\\}', '');
+    return;
+  }
 
   try {
     const f = DriveApp.getFileById(fileId);
     const blob = f.getBlob();
 
-    // CHANGE: ใส่โลโก้ “บนสุดจริง” และกันชนกับ title ด้วยการแทรก 2 บรรทัด
-    const p = body.insertParagraph(0, "");
+    let p;
+    let shouldInsertSpacer = false;
+    if (logoRange) {
+      let element = logoRange.getElement();
+      while (element.getParent() && element.getParent().getType() !== DocumentApp.ElementType.BODY_SECTION) {
+        element = element.getParent();
+      }
+      p = element.asParagraph();
+      p.clear();
+    } else {
+      p = body.insertParagraph(0, "");
+      shouldInsertSpacer = true;
+    }
+
     p.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
     p.setFontFamily(fontFamily || 'Sarabun');
 
     const img = p.appendInlineImage(blob);
 
-    const maxW = 110;
-    const maxH = 110;
+    const maxW = 150;
+    const maxH = 150;
     const w = img.getWidth();
     const h = img.getHeight();
     if (w > 0 && h > 0) {
@@ -2191,9 +2346,9 @@ function helpInsertReportLogo(body, fontFamily) {
       img.setHeight(Math.floor(h * ratio));
     }
 
-    // เว้น 1 บรรทัดหลังโลโก้
-    body.insertParagraph(1, " ");
+    if (shouldInsertSpacer) body.insertParagraph(1, " ");
   } catch (e) {
+    body.replaceText('\\{\\{LOGO\\}\\}', '');
     Logger.log('[WARN] REPORT_LOGO_FILE_ID ใช้งานไม่ได้: ' + e.message);
   }
 }
@@ -2227,28 +2382,19 @@ function sendNewRepairNotification(formData, docUrl, imageUrls = []) {
     let dateStr = sanitizeHtml(formData['{{วันที่}}'] || '');
     if (dateStr.includes(':') && !dateStr.includes('น.')) dateStr += ' น.';
 
-    const docLine = docUrl && String(docUrl).trim()
-      ? `📄 <b>เอกสาร</b> : พร้อมใช้งาน\n`
-      : `📄 <b>เอกสาร</b> : กำลังสร้างรายงาน\n`;
-
     const imageLine = (imageUrls && imageUrls.length > 0)
-      ? `📸 <b>รูปภาพแนบ</b> : ${imageUrls.length} รูป\n`
-      : '';
+      ? `📸 <b>รูปภาพ</b> : ${imageUrls.length} รูป\n`
+      : `📸 <b>รูปภาพ</b> : ไม่มี\n`;
 
     const message =
       `<b>📢 แจ้งซ่อมใหม่</b>\n` +
       `━━━━━━━━━━━━━━━\n` +
       `🏷️ <b>เลขที่งาน</b> : ${sanitizeHtml(seq)}\n` +
-      `📅 <b>วันที่แจ้ง</b> : ${dateStr}\n\n` +
-      `👤 <b>ผู้แจ้ง</b> : ${sanitizeHtml(requesterName)}\n` +
-      `📞 <b>เบอร์โทร</b> : ${phoneLink}\n\n` +
-      `📍 <b>สถานที่</b> : ${sanitizeHtml(location)}\n` +
-      `🔧 <b>ประเภทงาน</b> : ${sanitizeHtml(repairType)}\n` +
       `🛠 <b>รายการแจ้งซ่อม</b> : ${sanitizeHtml(repairItem)}\n` +
-      `📝 <b>อาการ</b> : ${sanitizeHtml(symptom)}\n\n` +
-      `${priorityIcon} <b>ความเร่งด่วน</b> : ${sanitizeHtml(priority)}\n\n` +
-      docLine +
-      imageLine +
+      `📍 <b>สถานที่</b> : ${sanitizeHtml(location)}\n` +
+      `👤 <b>ผู้แจ้ง</b> : ${sanitizeHtml(requesterName)}\n` +
+      `📌 <b>สถานะล่าสุด</b> : ${sanitizeHtml(STATUS.PENDING)}\n` +
+      `${imageLine}` +
       `\n<i>ระบบแจ้งซ่อมออนไลน์</i>`;
 
     if (typeof sendTelegramNotification === 'function') {
@@ -2334,6 +2480,13 @@ function sendStatusUpdateNotification(originalRowData, headers, newStatus, assig
       `\n<i>ระบบแจ้งซ่อมออนไลน์</i>`;
 
     const imageUrls = Array.isArray(latestStatusImageUrls) ? latestStatusImageUrls : [];
+
+    if (CONFIG.IS_TEST_MODE) {
+      Logger.log('🛠️ [TEST MODE - NOT SENT TO TELEGRAM] status update payload built for ' + sequenceNumber);
+      Logger.log('📝 Message Content:\n' + message);
+      if (imageUrls.length > 0) Logger.log('📸 Images: ' + JSON.stringify(imageUrls));
+      return { success: true, mode: 'TEST_ONLY' };
+    }
 
     sendTelegramNotification(message, imageUrls);
     Logger.log(`🔄 Sent status update notification for ${sequenceNumber}`);
@@ -2473,33 +2626,13 @@ function sendTelegramDocument(fileId, caption, replyMarkup) {
 }
 
 
-function sendPdfReadyNotification(sequenceNumber, pdfUrl) {
+function sendPdfReadyNotification(sequenceNumber, pdfUrl, pdfId) {
   try {
-    if (!pdfUrl || pdfUrl.trim() === '') {
-      Logger.log('⚠️ PDF URL is empty, skipping notification.');
-      return; 
-    }
-
-    // สร้างข้อความแบบ Clean ตามโจทย์
-    const message =
-      `📄 <b>PDF พร้อมแล้ว</b>\n` +
-      `➖➖➖➖➖➖➖➖➖➖\n` +
-      `🏷️ <b>เลขที่:</b> ${sequenceNumber}\n` +
-      `✅ กดปุ่มด้านล่างเพื่อเปิดไฟล์ PDF`;
-
-    // สร้างปุ่ม Inline Keyboard
-    const replyMarkup = {
-      inline_keyboard: [[
-        { text: '📂 เปิดไฟล์ PDF', url: pdfUrl }
-      ]]
-    };
-
-    // ส่งผ่านฟังก์ชันหลัก (ปิด Test Mode ในใจได้เลย เพราะฟังก์ชันหลักเราแก้ไปรอบที่แล้ว)
-    sendTelegramNotification(message, [], replyMarkup);
-    Logger.log(`✅ Sent PDF Ready notification for ${sequenceNumber}`);
-
+    Logger.log('PDF flow disabled; skipping PDF notification for ' + sequenceNumber);
+    return { success: true, skipped: true, reason: 'pdf_flow_disabled' };
   } catch (e) {
     Logger.log('❌ Error sending PDF notification: ' + e.message);
+    return { success: false, error: e.message };
   }
 }
 
@@ -2522,13 +2655,8 @@ function enqueuePdf(sequenceNumber) {
 
     const rowNumber = rowIndex + 1;
 
-    PropertiesService.getScriptProperties().setProperty(`PDFJOB_${target}`, JSON.stringify({
-      sequenceNumber: target,
-      rowNumber: rowNumber,
-      createdAt: Date.now()
-    }));
-
-    return { success: true, queued: true, sequenceNumber: target, rowNumber: rowNumber };
+    Logger.log('PDF flow disabled; enqueuePdf skipped for ' + target);
+    return { success: true, queued: false, skipped: true, sequenceNumber: target, rowNumber: rowNumber };
   } catch (e) {
     Logger.log('enqueuePdf error: ' + e.stack);
     return { success: false, error: e.message };
@@ -2606,7 +2734,7 @@ function pdfWorker(maxJobs) {
         SpreadsheetApp.flush(); // 🔥 บังคับบันทึกทันที ก่อนส่ง Notify
 
         // 3. ส่งแจ้งเตือน Telegram (เฉพาะเมื่อมี URL จริงแล้ว)
-        sendPdfReadyNotification(job.sequenceNumber, res.pdfUrl);
+        sendPdfReadyNotification(job.sequenceNumber, res.pdfUrl, res.pdfId);
 
         console.log(`✅ PDF Worker finished job: ${job.sequenceNumber}`);
         processedCount++;
@@ -2797,13 +2925,32 @@ function createMonthlyStockPdfTelegramTrigger() {
 
 function getSheetInstance() {
   const spreadsheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
-  let sheet = spreadsheet.getSheetByName(CONFIG.SHEET_NAME);
+  const candidateNames = [
+    CONFIG.SHEET_NAME,
+    'รายการแจ้งซ่อมทั้งหมด',
+    'repair',
+    'repairs'
+  ];
+
+  let sheet = null;
+  for (let i = 0; i < candidateNames.length; i++) {
+    const name = String(candidateNames[i] || '').trim();
+    if (!name) continue;
+    sheet = spreadsheet.getSheetByName(name);
+    if (sheet) {
+      Logger.log('[INFO] getSheetInstance matched sheet: ' + name);
+      break;
+    }
+  }
+
   if (!sheet) {
-    sheet = spreadsheet.insertSheet(CONFIG.SHEET_NAME);
-    const headers = ['เลขที่', 'วันที่', 'ชื่อผู้แจ้งซ่อม', 'เบอร์โทร', 'ประเภทงานซ่อม', 'รายการแจ้งซ่อม', 'อาการ', 'สถานที่', 'สถานะ', 'วันที่อัปเดตสถานะ', 'วันที่เสร็จสิ้น', 'รหัสเอกสาร', 'ลิงก์เอกสาร', 'ความเร่งด่วน', 'หมายเหตุ', 'ผู้รับผิดชอบ', 'URL รูปภาพประกอบ'];
+    const createdName = CONFIG.SHEET_NAME || 'รายการแจ้งซ่อมทั้งหมด';
+    sheet = spreadsheet.insertSheet(createdName);
+    const headers = ['เลขที่', 'วันที่', 'ชื่อผู้แจ้งซ่อม', 'เบอร์โทร', 'ประเภทงานซ่อม', 'รายการแจ้งซ่อม', 'อาการ', 'สถานที่', 'สถานะล่าสุด', 'วันที่อัปเดตสถานะ', 'วันที่เสร็จสิ้น', 'รหัสเอกสาร', 'ลิงก์เอกสาร', 'ความเร่งด่วน', 'หมายเหตุ', 'ผู้รับผิดชอบ', 'URL รูปภาพประกอบ'];
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
     sheet.setFrozenRows(1);
   }
+
   return sheet;
 }
 
@@ -3234,6 +3381,8 @@ function createMonthlyReportDocument(year, month, selectedTechnician) {
         let foundCount = 0;
         let completedCount = 0;
         let processingCount = 0;
+        let pendingCount = 0;
+        let cancelledCount = 0;
         let externalCount = 0;
         const pdfRows =[];
         const statusLogValues = getStatusLogValues_();
@@ -3271,6 +3420,8 @@ function createMonthlyReportDocument(year, month, selectedTechnician) {
           const statusRaw = colMap.status > -1 && rowRaw[colMap.status] ? String(rowRaw[colMap.status]).trim() : '';
           if (statusRaw === 'เสร็จสิ้น') completedCount++;
           if (statusRaw === 'กำลังดำเนินการ') processingCount++;
+          if (statusRaw === 'รอดำเนินการ') pendingCount++;
+          if (statusRaw === 'ยกเลิก') cancelledCount++;
           if (statusRaw === 'ดำเนินการภายนอก') externalCount++;
 
           const priorityVal = colMap.priority > -1 && rowRaw[colMap.priority] ? String(rowRaw[colMap.priority]).trim() : '';
@@ -3309,7 +3460,7 @@ function createMonthlyReportDocument(year, month, selectedTechnician) {
         status: statusRaw,
         note: '',
         user: techDisplay,
-        imageIds: imgIds || []
+        imageIds: []
       }];
 
       if (!technicianFilter && !techValue) {
@@ -3317,9 +3468,10 @@ function createMonthlyReportDocument(year, month, selectedTechnician) {
       }
 
       pdfRows.push({
-        data: [dateDisplay, seqVal, itemVal, ownerInfo, statusDisplay, techDisplay, ''],
-        imgIds: imgIds || [],
-        statusHistory: statusHistory.length ? statusHistory : fallbackStatusHistory
+        data: [dateDisplay, seqVal, itemVal, locVal, statusDisplay, techDisplay, ''],
+        summaryImgIds: imgIds || [],
+        statusHistory: statusHistory.length ? statusHistory : fallbackStatusHistory,
+        sortDate: targetDateObj.getTime()
       });
     }
 
@@ -3334,21 +3486,7 @@ function createMonthlyReportDocument(year, month, selectedTechnician) {
       const emptyMessage = technicianFilter
         ? 'ไม่พบข้อมูลของผู้รับผิดชอบ ' + technicianFilter + ' ในเดือนที่เลือก'
         : 'ไม่พบรายการแจ้งซ่อมในเดือนที่เลือก';
-
       Logger.log('[REPORT] empty result: ' + emptyMessage);
-
-      return {
-        success: true,
-        isEmpty: true,
-        message: emptyMessage,
-        reportData: {
-          summary: { totalItems: 0, totalCompleted: 0, totalProcessing: 0, totalExternal: 0 },
-          year: displayYearBE,
-          monthName: monthName,
-          technicianName: technicianFilter || '',
-          reportScopeLabel: technicianFilter ? ('ผู้รับผิดชอบ ' + technicianFilter) : 'รวมทุกคน'
-        }
-      };
     }
 
     return generatePdfFileFromRows(
@@ -3360,6 +3498,8 @@ function createMonthlyReportDocument(year, month, selectedTechnician) {
       foundCount,
       completedCount,
       processingCount,
+      pendingCount,
+      cancelledCount,
       externalCount,
       {
         technicianName: technicianFilter || '',
@@ -3407,7 +3547,7 @@ function helpGetReportImageBlob(fileId) {
   return null;
 }
 
-function generatePdfFileFromRows(pdfRows, tableData, colWidths, targetMonth, displayYearBE, foundCount, completedCount, processingCount, externalCount, options) {
+function generatePdfFileFromRows(pdfRows, tableData, colWidths, targetMonth, displayYearBE, foundCount, completedCount, processingCount, pendingCount, cancelledCount, externalCount, options) {
   const monthName = CONFIG && CONFIG.MONTHS_TH ? CONFIG.MONTHS_TH[targetMonth - 1] : String(targetMonth);
   const technicianName = options && options.technicianName ? String(options.technicianName).trim() : '';
   const isSingleTechnicianReport = !!technicianName;
@@ -3418,136 +3558,626 @@ function generatePdfFileFromRows(pdfRows, tableData, colWidths, targetMonth, dis
 
   Logger.log('[REPORT] pdf filename: ' + fileName);
 
-  const doc = DocumentApp.create(fileName);
-  const body = doc.getBody();
-  const font = CONFIG && CONFIG.FONT_FAMILY ? CONFIG.FONT_FAMILY : 'Sarabun';
+  const rawTemplateId = PropertiesService.getScriptProperties().getProperty('MONTHLY_TEMPLATE_ID') || '1VXuTOnSEv23_eVFlYihNEqnZzDUuKwzd';
+  const templateId = typeof extractFileIdFromUrl === 'function' ? extractFileIdFromUrl(rawTemplateId) : String(rawTemplateId || '').trim();
+  if (!templateId) {
+    return {
+      success: false,
+      error: 'ไม่พบการตั้งค่าเทมเพลต: กรุณาเพิ่มคุณสมบัติสคริปต์ชื่อ MONTHLY_TEMPLATE_ID ในหน้าตั้งค่าโครงการของ Google Apps Script ก่อน'
+    };
+  }
+  let templateFile, targetFolder, tempFile, doc, body;
+  try {
+    templateFile = DriveApp.getFileById(templateId);
+    if (templateFile.getMimeType() === 'application/vnd.google-apps.folder') {
+      throw new Error('ID ที่ระบบพยายามดึงเป็นโฟลเดอร์ ไม่ใช่ไฟล์ Google Docs (โปรดตรวจสอบค่า templateId หรือสิทธิ์เข้าถึง)');
+    }
+  } catch (e) {
+    Logger.log('[ERROR] Failed to get template file: ' + e.message);
+    return {
+      success: false,
+      error: 'ไม่ได้รับอนุญาตให้เข้าถึงเทมเพลต: ' + e.message + ' (โปรดระบุ Google Docs Template ID ที่ถูกต้องแทน Folder ID หรือตรวจสอบสิทธิ์การแชร์ไฟล์)'
+    };
+  }
 
-  doc.setMarginLeft(24).setMarginRight(24).setMarginTop(24).setMarginBottom(24);
+  try {
+    targetFolder = DriveApp.getFolderById(CONFIG.TARGET_FOLDER_ID);
+    tempFile = templateFile.makeCopy(fileName, targetFolder);
+    doc = DocumentApp.openById(tempFile.getId());
+    body = doc.getBody();
+  } catch (e) {
+    Logger.log('[ERROR] Failed to copy template or open doc: ' + e.message);
+    return {
+      success: false,
+      error: 'ไม่สามารถสร้างเอกสารจากเทมเพลตได้: ' + e.message
+    };
+  }
+  const font = CONFIG && CONFIG.FONT_FAMILY ? CONFIG.FONT_FAMILY : 'TH SarabunPSK';
+
+  // Apply compact report margins.
+  doc.setMarginLeft(28).setMarginRight(28).setMarginTop(28).setMarginBottom(28);
   try {
     if (typeof applyDocLandscapeA4 === 'function') applyDocLandscapeA4(doc.getId());
   } catch (e) {
     Logger.log('[WARN] applyDocLandscapeA4 failed: ' + e.message);
   }
-
   try {
-    if (CONFIG && CONFIG.REPORT_LOGO_FILE_ID) {
-      const logoFile = DriveApp.getFileById(CONFIG.REPORT_LOGO_FILE_ID);
-      const logoBlob = logoFile.getBlob();
-      const pLogo = body.appendParagraph('');
-      pLogo.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-      const img = pLogo.appendInlineImage(logoBlob);
+    if (typeof helpInsertReportLogo === 'function') helpInsertReportLogo(body, font);
+  } catch (e) {
+    Logger.log('[WARN] helpInsertReportLogo failed: ' + e.message);
+  }
 
-      const maxLogo = 90;
-      const lw = img.getWidth();
-      const lh = img.getHeight();
-      if (lw > 0 && lh > 0) {
-        const ratio = lw > lh ? (maxLogo / lw) : (maxLogo / lh);
-        img.setWidth(Math.floor(lw * ratio));
-        img.setHeight(Math.floor(lh * ratio));
+  // 1. Prepare Placeholders
+  const printDateStr = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'dd/MM/yyyy HH:mm') + ' น.';
+  const scopeLabel = options && options.reportScopeLabel ? options.reportScopeLabel : (isSingleTechnicianReport ? 'ผู้รับผิดชอบ ' + technicianName : 'รวมทุกคน');
+  const placeholders = {
+    '{{เดือน}}': monthName,
+    '{{month}}': monthName,
+    '{{ปี}}': String(displayYearBE),
+    '{{year}}': String(displayYearBE),
+    '{{ผู้รับผิดชอบ}}': scopeLabel,
+    '{{technician}}': scopeLabel,
+    '{{จำนวนทั้งหมด}}': '',
+    '{{จำนวนงานทั้งหมด}}': String(foundCount || 0),
+    '{{total}}': '',
+    '{{เสร็จสิ้น}}': '',
+    '{{จำนวนงานเสร็จ}}': String(completedCount || 0),
+    '{{completed}}': '',
+    '{{กำลังดำเนินการ}}': '',
+    '{{จำนวนงานดำเนินการ}}': String(processingCount || 0),
+    '{{processing}}': '',
+    '{{จำนวนงานรอ}}': String(pendingCount || 0),
+    '{{รอดำเนินการ}}': String(pendingCount || 0),
+    '{{จำนวนงานยกเลิก}}': String(cancelledCount || 0),
+    '{{ยกเลิก}}': String(cancelledCount || 0),
+    '{{ดำเนินการภายนอก}}': '',
+    '{{external}}': '',
+    '{{วันที่พิมพ์}}': printDateStr,
+    '{{printDate}}': printDateStr,
+    'ประวัติสถานะและเส้นทางเวลา \\(Timeline\\)': 'สถานะล่าสุดของงาน',
+    'ประวัติสถานะและเส้นทางเวลา': 'สถานะล่าสุดของงาน'
+  };
+
+  // Replace text in Body
+  for (let key in placeholders) {
+    body.replaceText(key, placeholders[key]);
+  }
+
+  // Replace text in Header
+  try {
+    const header = doc.getHeader();
+    if (header) {
+      for (let key in placeholders) {
+        header.replaceText(key, placeholders[key]);
       }
-      body.appendParagraph(' ');
     }
-  } catch (e) {}
+  } catch (e) {
+    Logger.log('[WARN] Replace in header error: ' + e.message);
+  }
 
-  const titleText = isSingleTechnicianReport
-    ? 'รายงานสรุปการแจ้งซ่อม\nประจำเดือน ' + monthName + ' พ.ศ. ' + displayYearBE + '\nผู้รับผิดชอบ ' + technicianName
-    : 'รายงานสรุปการแจ้งซ่อม\nประจำเดือน ' + monthName + ' พ.ศ. ' + displayYearBE;
+  // Replace text in Footer
+  try {
+    const footer = doc.getFooter();
+    if (footer) {
+      for (let key in placeholders) {
+        footer.replaceText(key, placeholders[key]);
+      }
+    }
+  } catch (e) {
+    Logger.log('[WARN] Replace in footer error: ' + e.message);
+  }
 
-  const title = body.appendParagraph(titleText);
-  title.setAlignment(DocumentApp.HorizontalAlignment.LEFT)
-    .setHeading(DocumentApp.ParagraphHeading.HEADING2)
-    .setFontFamily(font)
-    .setFontSize(14)
-    .setBold(true);
+  const styleExistingReportText = function() {
+    for (let i = 0; i < body.getNumChildren(); i++) {
+      const child = body.getChild(i);
+      if (child.getType && child.getType() === DocumentApp.ElementType.PARAGRAPH) {
+        const p = child.asParagraph();
+        const text = String(p.getText() || '').trim();
+        p.setFontFamily(font).setFontSize(10).setLineSpacing(1.0);
+        if (text.indexOf('รายงานสรุปการแจ้งซ่อม') !== -1) {
+          p.setFontSize(17).setBold(true).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+          p.setSpacingBefore(2).setSpacingAfter(2);
+        } else if (text.indexOf('ประจำเดือน') !== -1) {
+          p.setFontSize(12).setBold(true).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+          p.setSpacingAfter(4);
+        } else if (text.indexOf('ผู้รับผิดชอบ') !== -1 || text.indexOf('ข้อมูล ณ วันที่') !== -1) {
+          p.setFontSize(9.5).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+          p.setSpacingBefore(0).setSpacingAfter(0);
+        } else if (/^[-•]\s*(งานทั้งหมด|เสร็จสิ้น|กำลังดำเนินการ|รอดำเนินการ|ยกเลิก)\s*:/.test(text)) {
+          const m = text.match(/^[-•]\s*([^:]+)\s*:\s*(.*)$/);
+          if (m) p.asText().setText(m[1] + '\t' + m[2]);
+          p.setFontSize(9.5).setSpacingBefore(0).setSpacingAfter(0).setIndentStart(14);
+        } else if (text.indexOf('สรุปภาพรวม') !== -1) {
+          p.setFontSize(10).setBold(true).setSpacingBefore(1).setSpacingAfter(1);
+        } else if (text.indexOf('ตารางรายการแจ้งซ่อม') !== -1) {
+          p.setFontSize(10).setBold(true).setSpacingBefore(1).setSpacingAfter(5);
+        }
+      }
+    }
+  };
+  styleExistingReportText();
 
-  body.appendParagraph(' ');
-
-  const colCount = tableData && tableData[0] ? tableData[0].length : 7;
-  const defaultWidths = [75, 105, 145, 155, 70, 90, 150];
-  const widths = Array.isArray(colWidths) && colWidths.length === colCount ? colWidths : defaultWidths;
-
-  let PAGE_LIMIT = 480;
-  let currentHeight = 0;
-
-  let currentTable = body.appendTable();
-  formatTableHeader(currentTable, tableData[0], widths, font);
-
-  const rows = (Array.isArray(pdfRows) ? pdfRows : []).map(function(r) {
+  // Map rows
+  const parsedRows = (Array.isArray(pdfRows) ? pdfRows : []).map(function(r) {
     if (r && typeof r === 'object' && !Array.isArray(r)) {
       const dataArr = Array.isArray(r.data) ? r.data.slice() : [];
-      while (dataArr.length < colCount) dataArr.push('');
-      const ids = Array.isArray(r.imgIds) ? r.imgIds : (r.imgId ? [String(r.imgId)] : []);
-      return { data: dataArr, imgIds: ids, statusHistory: Array.isArray(r.statusHistory) ? r.statusHistory : [] };
+      const ids = Array.isArray(r.summaryImgIds)
+        ? r.summaryImgIds
+        : (Array.isArray(r.imgIds) ? r.imgIds : (r.imgId ? [String(r.imgId)] : []));
+      return {
+        data: dataArr,
+        summaryImgIds: ids,
+        statusHistory: Array.isArray(r.statusHistory) ? r.statusHistory : [],
+        sortDate: typeof r.sortDate === 'number' ? r.sortDate : Number.MAX_SAFE_INTEGER
+      };
     }
-
     const arr = Array.isArray(r) ? r.slice() : [];
-    while (arr.length < colCount) arr.push('');
-    return { data: arr, imgIds: [], statusHistory: [] };
+    return { data: arr, summaryImgIds: [], statusHistory: [], sortDate: Number.MAX_SAFE_INTEGER };
+  }).sort(function(a, b) {
+    return (a.sortDate || Number.MAX_SAFE_INTEGER) - (b.sortDate || Number.MAX_SAFE_INTEGER);
   });
 
-  rows.forEach(function(row) {
-    const hasImage = row.imgIds && row.imgIds.length > 0;
-    // [FIX] รูปเรียงแนวนอนใน bounding box → กัน page break ตัด row รูปภาพ
-    let estimatedRowHeight = hasImage ? 160 : 65;
-
-    const maxTextLen = row.data.reduce(function(max, txt) {
-      return Math.max(max, String(txt).length);
-    }, 0);
-
-    if (maxTextLen > 100) estimatedRowHeight += 40;
-
-    if (currentHeight + estimatedRowHeight > PAGE_LIMIT) {
-      const numChildren = body.getNumChildren();
-      const lastChild = body.getChild(numChildren - 1);
-
-      if (lastChild.getType() === DocumentApp.ElementType.PARAGRAPH) {
-        lastChild.asParagraph().appendPageBreak();
-      } else {
-        body.appendPageBreak();
+  // Helper to find a placeholder element's child index in the Body
+  const findPlaceholderIndex = function(placeholder) {
+    const rangeElement = body.findText(placeholder);
+    if (rangeElement) {
+      let element = rangeElement.getElement();
+      while (element.getParent() && element.getParent().getType() !== DocumentApp.ElementType.BODY_SECTION) {
+        element = element.getParent();
       }
+      return body.getChildIndex(element);
+    }
+    return -1;
+  };
 
-      currentTable = body.appendTable();
-      formatTableHeader(currentTable, tableData[0], widths, font);
-      PAGE_LIMIT = 480;
-      currentHeight = 0;
+  const writeSectionDivider = function(container, insertIndex) {
+    const p = insertIndex !== undefined ? container.insertParagraph(insertIndex, '────────────────────────────────────────') : container.appendParagraph('────────────────────────────────────────');
+    p.setFontFamily(font).setFontSize(9).setForegroundColor('#cbd5e1')
+      .setAlignment(DocumentApp.HorizontalAlignment.CENTER)
+      .setSpacingBefore(10).setSpacingAfter(8);
+    return p;
+  };
+
+  const insertParagraphAt = function(container, insertIndex, text) {
+    return insertIndex !== undefined
+      ? container.insertParagraph(insertIndex, text)
+      : container.appendParagraph(text);
+  };
+
+  const formatPlainParagraph = function(p, isBold, fontSize, align, color, before, after) {
+    p.setFontFamily(font)
+      .setFontSize(fontSize || 9.5)
+      .setBold(!!isBold)
+      .setAlignment(align || DocumentApp.HorizontalAlignment.LEFT)
+      .setSpacingBefore(before !== undefined ? before : 0)
+      .setSpacingAfter(after !== undefined ? after : 0)
+      .setLineSpacing(1.0);
+    if (color) p.setForegroundColor(color);
+    return p;
+  };
+
+  const getLatestLog = function(row) {
+    const history = row && Array.isArray(row.statusHistory) ? row.statusHistory : [];
+    return history.length ? (history[history.length - 1] || {}) : {};
+  };
+
+  const getFirstLog = function(row) {
+    const history = row && Array.isArray(row.statusHistory) ? row.statusHistory : [];
+    return history.length ? (history[0] || {}) : {};
+  };
+
+  const formatLogDate = function(value) {
+    if (value instanceof Date && !isNaN(value.getTime())) {
+      const dayMonth = Utilities.formatDate(value, 'GMT+7', 'dd/MM/');
+      const yearBE = parseInt(Utilities.formatDate(value, 'GMT+7', 'yyyy'), 10) + 543;
+      const time = Utilities.formatDate(value, 'GMT+7', 'HH:mm');
+      return dayMonth + yearBE + ' ' + time;
+    }
+    const text = String(value || '').trim();
+    return text || '-';
+  };
+
+  // 2. Build Summary Table (without images, width ~78-80%, centered, compact)
+  const buildSummaryTable = function(container, insertIndex) {
+    if (!parsedRows.length) {
+      formatPlainParagraph(
+        insertParagraphAt(container, insertIndex, 'ไม่มีรายการแจ้งซ่อมในเดือนนี้'),
+        false, 11, DocumentApp.HorizontalAlignment.CENTER, '#475569', 4, 6
+      );
+      return;
     }
 
-    appendRowToTable(currentTable, row, widths, font);
-    currentHeight += estimatedRowHeight;
-  });
+    const table = insertIndex !== undefined ? container.insertTable(insertIndex) : container.appendTable();
+    if (typeof table.setAlignment === 'function') {
+      table.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+    }
+    try {
+      table.setAttributes({ [DocumentApp.Attribute.HORIZONTAL_ALIGNMENT]: DocumentApp.HorizontalAlignment.CENTER });
+    } catch (e) {}
+    if (typeof table.setBorderWidth === 'function') table.setBorderWidth(0.5);
+    if (typeof table.setBorderColor === 'function') table.setBorderColor('#94a3b8');
 
-  body.appendParagraph(' ');
-  appendStatusHistoryToReport_(body, rows, font);
-  body.appendParagraph(' ');
-  
-  body.appendParagraph('รวมทั้งหมด: ' + foundCount + ' รายการ | เสร็จสิ้น: ' + completedCount + ' | กำลังดำเนินการ: ' + processingCount + ' | ดำเนินการภายนอก: ' + externalCount)
-    .setAlignment(DocumentApp.HorizontalAlignment.RIGHT)
-    .setFontFamily(font)
-    .setFontSize(9)
-    .setForegroundColor('#666666');
+    const summaryHeaders = ['เลขที่', 'วันที่', 'รายการแจ้งซ่อม', 'สถานที่', 'สถานะ', 'ผู้รับผิดชอบ'];
+    const summaryWidths = [78, 82, 214, 118, 92, 96]; // total 680pt (A4 landscape, compact)
 
-  const now = new Date();
-  const reportStamp = typeof formatThaiDateTime === 'function'
-    ? formatThaiDateTime(now)
-    : Utilities.formatDate(now, 'GMT+7', 'dd/MM/yyyy HH:mm') + ' น.';
+    // Header row
+    const trHeader = table.appendTableRow();
+    summaryHeaders.forEach((text, i) => {
+      const cell = trHeader.appendTableCell(text);
+      cell.setBackgroundColor('#e2e8f0')
+          .setPaddingTop(1).setPaddingBottom(1)
+          .setPaddingLeft(5).setPaddingRight(5)
+          .setWidth(summaryWidths[i]);
+      if (cell.getNumChildren() > 0) {
+        const p = cell.getChild(0).asParagraph();
+        p.setAlignment(DocumentApp.HorizontalAlignment.CENTER)
+         .setFontFamily(font).setFontSize(8.3).setBold(true)
+         .setForegroundColor('#0f172a')
+         .setSpacingBefore(0).setSpacingAfter(0);
+      }
+    });
 
-  body.appendParagraph('ออกรายงานเมื่อ: ' + reportStamp)
-    .setAlignment(DocumentApp.HorizontalAlignment.RIGHT)
-    .setFontFamily(font)
-    .setFontSize(9)
-    .setForegroundColor('#999999');
+    // Content rows
+    parsedRows.forEach(function(row) {
+      const tr = table.appendTableRow();
+      const rowData = [
+        row.data && row.data[1] ? row.data[1] : '-',
+        row.data && row.data[0] ? row.data[0] : '-',
+        row.data && row.data[2] ? row.data[2] : '-',
+        row.data && row.data[3] ? row.data[3] : '-',
+        row.data && row.data[4] ? row.data[4] : '-',
+        row.data && row.data[5] ? row.data[5] : '-'
+      ];
+      rowData.forEach((text, i) => {
+        const cell = tr.appendTableCell('');
+        cell.setPaddingTop(0).setPaddingBottom(0)
+            .setPaddingLeft(5).setPaddingRight(5)
+            .setWidth(summaryWidths[i]);
+        
+        const align = (i === 0 || i === 1 || i === 4)
+            ? DocumentApp.HorizontalAlignment.CENTER
+            : DocumentApp.HorizontalAlignment.LEFT;
+             
+        helpWriteCellLines(cell, text, align, font, 8.3);
+        if (i === 0) {
+          for (let pIndex = 0; pIndex < cell.getNumChildren(); pIndex++) {
+            const child = cell.getChild(pIndex);
+            if (child.getType && child.getType() === DocumentApp.ElementType.PARAGRAPH) {
+              child.asParagraph().setBold(true).setForegroundColor('#0f172a');
+            }
+          }
+        }
+      });
+    });
 
-  doc.saveAndClose();
+    try {
+      const tableIndex = container.getChildIndex(table);
+      const gap = container.insertParagraph(tableIndex + 1, '');
+      gap.setFontFamily(font).setFontSize(4).setSpacingBefore(2).setSpacingAfter(2).setLineSpacing(1.0);
+    } catch (e) {}
 
-  const docFile = DriveApp.getFileById(doc.getId());
-  const targetFolder = DriveApp.getFolderById(CONFIG.TARGET_FOLDER_ID);
-  const pdfBlob = docFile.getAs(MimeType.PDF);
-  const pdfFile = targetFolder.createFile(pdfBlob).setName(fileName + '.pdf');
+    return table;
+  };
 
-  pdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  const replacePlaceholderBlock = function(candidates, builder) {
+    let insertIndex = -1;
+    for (let i = 0; i < candidates.length; i++) {
+      insertIndex = findPlaceholderIndex(candidates[i]);
+      if (insertIndex !== -1) break;
+    }
+    if (insertIndex !== -1) {
+      const placeholderElement = body.getChild(insertIndex);
+      builder(body, insertIndex);
+      try {
+        if (placeholderElement && placeholderElement.getParent && placeholderElement.getParent()) {
+          body.removeChild(placeholderElement);
+        }
+      } catch (e) {}
+    } else {
+      builder(body);
+    }
+  };
 
-  if (!options || options.keepDoc !== true) {
-    docFile.setTrashed(true);
+  replacePlaceholderBlock(['{{ตารางสรุป}}', '{{summaryTable}}'], buildSummaryTable);
+
+  // 3. Build compact status timeline (all statuses, no image, no table)
+  const buildStatusHistory = function(container, startIndex) {
+    let index = startIndex;
+    const writeParagraph = function(text, isBold, fontSize, align, color, spacingBefore, spacingAfter) {
+      const p = index !== undefined ? container.insertParagraph(index++, text) : container.appendParagraph(text);
+      p.setFontFamily(font)
+       .setFontSize(fontSize || 10)
+       .setBold(!!isBold)
+       .setAlignment(align || DocumentApp.HorizontalAlignment.LEFT);
+      if (color) p.setForegroundColor(color);
+      p.setSpacingBefore(spacingBefore !== undefined ? spacingBefore : 0);
+      p.setSpacingAfter(spacingAfter !== undefined ? spacingAfter : 0);
+      p.setLineSpacing(1.0);
+      return p;
+    };
+
+    if (!parsedRows.length) {
+      writeParagraph('ไม่มีประวัติสถานะ', false, 11, DocumentApp.HorizontalAlignment.CENTER, '#475569', 4, 6);
+      return;
+    }
+
+    parsedRows.forEach(function(row, rowIndex) {
+      const seq = row.data && row.data[1] ? String(row.data[1]).trim() : '';
+      const item = row.data && row.data[2] ? String(row.data[2]).trim() : '';
+      const history = Array.isArray(row.statusHistory) && row.statusHistory.length
+        ? row.statusHistory
+        : [{ status: row.data && row.data[4] ? row.data[4] : '-', date: row.data && row.data[0] ? row.data[0] : '-', note: '', user: row.data && row.data[5] ? row.data[5] : '-' }];
+      const latestLog = history[history.length - 1] || {};
+      const logUser = String(latestLog.user || (row.data && row.data[5]) || '-').trim() || '-';
+      const logNote = String(latestLog.note || '').trim() || '-';
+
+      const statusText = String(latestLog.status || '-').trim() || '-';
+      const dateText = formatLogDate(latestLog.date || '');
+      const logCountText = history.length > 1 ? ' (' + history.length + ' log)' : '';
+      writeParagraph(
+        (seq || '-') + ' | ' + (item || '-') + ' | ล่าสุด: ' + statusText + ' | ' + dateText + logCountText + ' | ผู้รับผิดชอบ: ' + logUser,
+        false, 9, DocumentApp.HorizontalAlignment.LEFT, '#0f172a', rowIndex === 0 ? 0 : 2, 1
+      );
+    });
+  };
+
+  replacePlaceholderBlock(['{{ประวัติสถานะ}}', '{{statusHistory}}'], buildStatusHistory);
+
+  const cleanupBeforeImageSection = function() {
+    body.replaceText('\\[PAGE BREAK\\]', '');
+    body.replaceText('=== PAGE BREAK ===', '');
+    const titleIndex = findPlaceholderIndex('รูปก่อนซ่อมและหลังซ่อม');
+    const imageIndex = findPlaceholderIndex('{{SECTION_รูปภาพ}}') !== -1
+      ? findPlaceholderIndex('{{SECTION_รูปภาพ}}')
+      : (findPlaceholderIndex('{{รูปก่อนหลัง}}') !== -1 ? findPlaceholderIndex('{{รูปก่อนหลัง}}') : findPlaceholderIndex('{{beforeAfterImages}}'));
+    const sectionIndex = titleIndex !== -1 ? titleIndex : imageIndex;
+    if (sectionIndex === -1) return;
+    for (let i = sectionIndex - 1; i >= 0; i--) {
+      const child = body.getChild(i);
+      if (!child || !child.getType) break;
+      if (child.getType() === DocumentApp.ElementType.PAGE_BREAK) {
+        if (body.getNumChildren() <= 1) break;
+        body.removeChild(child);
+        continue;
+      }
+      if (child.getType() === DocumentApp.ElementType.HORIZONTAL_RULE) {
+        if (body.getNumChildren() <= 1) break;
+        body.removeChild(child);
+        continue;
+      }
+      if (child.getType() !== DocumentApp.ElementType.PARAGRAPH) break;
+      const text = String(child.asParagraph().getText() || '').trim();
+      const isSeparatorOnly = /^[─━_\-\s]+$/.test(text);
+      if (text && !isSeparatorOnly) break;
+      if (body.getNumChildren() <= 1) break;
+      body.removeChild(child);
+    }
+  };
+
+  const getLatestStatusImageId = function(row) {
+    const history = row && Array.isArray(row.statusHistory) ? row.statusHistory : [];
+    for (let i = history.length - 1; i >= 0; i--) {
+      const ids = Array.isArray(history[i].imageIds) ? history[i].imageIds.filter(Boolean) : [];
+      if (ids[0]) return ids[0];
+    }
+    return '';
+  };
+
+  const appendImageToCell = function(cell, fileId, seq, label, imageSize) {
+    const p = cell.appendParagraph('');
+    p.setAlignment(DocumentApp.HorizontalAlignment.CENTER)
+      .setSpacingBefore(0).setSpacingAfter(0);
+    if (!fileId) return false;
+    try {
+      const blob = helpGetReportImageBlob(fileId);
+      if (!blob) {
+        Logger.log('[WARN] Monthly report image skipped: ' + label + ' | seq=' + seq + ' | id=' + fileId);
+        return false;
+      }
+      const img = p.appendInlineImage(blob);
+      const size = imageSize || 150;
+      img.setWidth(size).setHeight(size);
+      return true;
+    } catch (err) {
+      Logger.log('[WARN] Monthly report image failed: ' + label + ' | seq=' + seq + ' | id=' + fileId + ' | ' + err.toString());
+      return false;
+    }
+  };
+
+  const buildBeforeAfterImages = function(container, startIndex) {
+    let index = startIndex;
+    const writeParagraph = function(text, isBold, fontSize, align, color, spacingBefore, spacingAfter) {
+      const p = index !== undefined ? container.insertParagraph(index++, text) : container.appendParagraph(text);
+      return formatPlainParagraph(p, isBold, fontSize, align, color, spacingBefore, spacingAfter);
+    };
+
+    const imageRows = parsedRows.map(function(row) {
+      const beforeId = (row.summaryImgIds || []).filter(Boolean)[0] || '';
+      const afterId = getLatestStatusImageId(row);
+      return { row: row, beforeId: beforeId, afterId: afterId };
+    }).filter(function(item) {
+      return item.beforeId || item.afterId;
+    });
+
+    if (!imageRows.length) {
+      if (index !== undefined) {
+        for (let i = index - 1; i >= 0; i--) {
+          const child = container.getChild(i);
+          if (!child || !child.getType) break;
+          if (child.getType() === DocumentApp.ElementType.HORIZONTAL_RULE) {
+            if (container.getNumChildren() <= 1) break;
+            container.removeChild(child);
+            continue;
+          }
+          if (child.getType() !== DocumentApp.ElementType.PARAGRAPH) break;
+          const text = String(child.asParagraph().getText() || '').trim();
+          const isSeparatorOnly = /^[─━_\-\s]+$/.test(text);
+          const isImageHeading = text.indexOf('รูปภาพ') !== -1 || text.indexOf('รูปก่อนซ่อม') !== -1 || text.indexOf('รูปหลังซ่อม') !== -1;
+          if (!isSeparatorOnly && !isImageHeading && text) break;
+          if (container.getNumChildren() <= 1) break;
+          container.removeChild(child);
+          if (isImageHeading) break;
+        }
+      }
+      return;
+    }
+
+    imageRows.forEach(function(itemWithImages, rowIndex) {
+      const row = itemWithImages.row;
+      const seq = row.data && row.data[1] ? String(row.data[1]).trim() : '-';
+      const item = row.data && row.data[2] ? String(row.data[2]).trim() : '-';
+      const beforeId = itemWithImages.beforeId;
+      const afterId = itemWithImages.afterId;
+      const imageColumns = [];
+      if (beforeId) imageColumns.push({ label: 'ก่อนซ่อม', id: beforeId, type: 'before' });
+      if (afterId) imageColumns.push({ label: 'หลังซ่อม', id: afterId, type: 'after' });
+
+      writeParagraph('เลขที่งาน: ' + seq + ' | ' + item, true, 9.5, DocumentApp.HorizontalAlignment.LEFT, '#0f172a', rowIndex > 0 ? 2 : 0, 1);
+
+      const table = index !== undefined ? container.insertTable(index++) : container.appendTable();
+      try {
+        table.setAttributes({ [DocumentApp.Attribute.HORIZONTAL_ALIGNMENT]: DocumentApp.HorizontalAlignment.CENTER });
+      } catch (e) {}
+      if (typeof table.setBorderWidth === 'function') table.setBorderWidth(0);
+
+      const imageRow = table.appendTableRow();
+      const imageCellWidth = imageColumns.length === 1 ? 240 : 170;
+      const imageSize = imageColumns.length === 1 ? 180 : 150;
+      imageColumns.forEach(function(imageColumn) {
+        const imageCell = imageRow.appendTableCell('');
+        imageCell.setWidth(imageCellWidth).setPaddingTop(0).setPaddingBottom(0).setPaddingLeft(3).setPaddingRight(3);
+        appendImageToCell(imageCell, imageColumn.id, seq, imageColumn.type, imageSize);
+      });
+
+      const captionRow = table.appendTableRow();
+      imageColumns.forEach(function(imageColumn) {
+        const captionCell = captionRow.appendTableCell(imageColumn.label || 'รูปประกอบ');
+        captionCell.setWidth(imageCellWidth).setPaddingTop(0).setPaddingBottom(1).setPaddingLeft(3).setPaddingRight(3);
+        captionCell.getChild(0).asParagraph()
+          .setFontFamily(font).setFontSize(8.5).setBold(false)
+          .setForegroundColor('#475569')
+          .setAlignment(DocumentApp.HorizontalAlignment.CENTER)
+          .setSpacingBefore(0).setSpacingAfter(0);
+      });
+
+      if (rowIndex < imageRows.length - 1) {
+        writeParagraph('', false, 4, DocumentApp.HorizontalAlignment.LEFT, '#94a3b8', 1, 1);
+      }
+    });
+  };
+
+  cleanupBeforeImageSection();
+  replacePlaceholderBlock(['{{SECTION_รูปภาพ}}', '{{รูปก่อนหลัง}}', '{{beforeAfterImages}}'], buildBeforeAfterImages);
+
+  const cleanupMonthlyTemplateExamples = function() {
+    const removeTextPatterns = [
+      'ตัวอย่างตาราง:',
+      'ตัวอย่างรูปแบบ',
+      'รูปแบบที่ระบบต้อง render:',
+      'ใช้เฉพาะรูปหลักของแต่ละงาน',
+      'จำกัด 1 รูปก่อนซ่อม และ 1 รูปหลังซ่อม',
+      'หากไม่มีรูปภาพ ให้แสดง "ไม่มีรูปภาพประกอบ"',
+      'ขนาดรูปแนะนำ 135x135 px',
+      'จัดรูปแบบ center aligned',
+      '{{เลขที่งาน}}',
+      '{{รายการแจ้งซ่อม}}',
+      '{{สถานะก่อนซ่อม}}',
+      '{{วันที่ก่อนซ่อม}}',
+      '{{สถานะหลังซ่อม}}',
+      '{{วันที่หลังซ่อม}}',
+      '{{ผู้รับผิดชอบงาน}}',
+      '{{หมายเหตุล่าสุด}}',
+      '{{รูปก่อนซ่อม}}',
+      '{{รูปหลังซ่อม}}'
+    ];
+    for (let i = body.getNumChildren() - 1; i >= 0; i--) {
+      const child = body.getChild(i);
+      if (!child.getType || child.getType() !== DocumentApp.ElementType.PARAGRAPH) continue;
+      const text = String(child.asParagraph().getText() || '').trim();
+      const isExactNoteTitle = text === 'หมายเหตุ:' || text === 'หมายเหตุ';
+      const hasExampleText = removeTextPatterns.some(function(pattern) {
+        return text.indexOf(pattern) !== -1;
+      });
+      const hasUnresolvedPlaceholder = text.indexOf('{{') !== -1 && text.indexOf('}}') !== -1;
+      if ((isExactNoteTitle || hasExampleText || hasUnresolvedPlaceholder) && body.getNumChildren() > 1) {
+        body.removeChild(child);
+      }
+    }
+  };
+
+  cleanupMonthlyTemplateExamples();
+
+  const trimReportDocumentTail = function() {
+    const isEmptyTailElement = function(element) {
+      if (!element || !element.getType) return false;
+      const type = element.getType();
+      if (type === DocumentApp.ElementType.PAGE_BREAK) return true;
+      if (type === DocumentApp.ElementType.HORIZONTAL_RULE) return true;
+      if (type === DocumentApp.ElementType.PARAGRAPH || type === DocumentApp.ElementType.LIST_ITEM) {
+        const text = String(element.asText ? element.asText().getText() : element.getText()).trim();
+        if (text) return false;
+        for (let i = 0; i < element.getNumChildren(); i++) {
+          const childType = element.getChild(i).getType();
+          if (childType !== DocumentApp.ElementType.TEXT && childType !== DocumentApp.ElementType.PAGE_BREAK) {
+            return false;
+          }
+        }
+        return true;
+      }
+      if (type === DocumentApp.ElementType.TABLE) {
+        const table = element.asTable();
+        for (let r = 0; r < table.getNumRows(); r++) {
+          const row = table.getRow(r);
+          for (let c = 0; c < row.getNumCells(); c++) {
+            if (String(row.getCell(c).getText() || '').trim()) return false;
+          }
+        }
+        return true;
+      }
+      return false;
+    };
+
+    while (body.getNumChildren() > 1) {
+      const lastIndex = body.getNumChildren() - 1;
+      const last = body.getChild(lastIndex);
+      if (!isEmptyTailElement(last)) break;
+      body.removeChild(last);
+    }
+  };
+
+  try {
+    trimReportDocumentTail();
+  } catch (e) {
+    Logger.log('[WARN] trimReportDocumentTail failed: ' + e.message);
+  }
+
+  try {
+    doc.saveAndClose();
+  } catch (e) {
+    Logger.log('[ERROR] Failed to save/close doc: ' + e.message);
+  }
+
+  let pdfFile;
+  try {
+    const docFile = DriveApp.getFileById(doc.getId());
+    const pdfBlob = docFile.getAs(MimeType.PDF);
+    pdfFile = targetFolder.createFile(pdfBlob).setName(fileName + '.pdf');
+    pdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  } catch (e) {
+    Logger.log('[ERROR] Failed to export PDF: ' + e.message);
+    return {
+      success: false,
+      error: 'ไม่สามารถแปลงหรือส่งออกรายงานเป็นไฟล์ PDF ได้: ' + e.message + ' (โปรดตรวจสอบสิทธิ์เข้าถึงโฟลเดอร์ปลายทางหรือพื้นที่เก็บข้อมูลใน Google Drive)'
+    };
+  }
+
+  // Clean up temporary Doc
+  try {
+    if (!options || options.keepDoc !== true) {
+      DriveApp.getFileById(doc.getId()).setTrashed(true);
+    }
+  } catch (e) {
+    Logger.log('[WARN] Clean up temporary Doc failed: ' + e.message);
   }
 
   return {
@@ -3555,11 +4185,13 @@ function generatePdfFileFromRows(pdfRows, tableData, colWidths, targetMonth, dis
     pdfUrl: pdfFile.getUrl(),
     pdfId: pdfFile.getId(),
     docName: fileName,
-   reportData: {
+    reportData: {
       summary: {
         totalItems: foundCount,
         totalCompleted: completedCount,
         totalProcessing: processingCount,
+        totalPending: pendingCount,
+        totalCancelled: cancelledCount,
         totalExternal: externalCount
       },
       year: displayYearBE,
@@ -3568,181 +4200,6 @@ function generatePdfFileFromRows(pdfRows, tableData, colWidths, targetMonth, dis
       reportScopeLabel: isSingleTechnicianReport ? ('ผู้รับผิดชอบ ' + technicianName) : 'รวมทุกคน'
     }
   };
-}
-
-// --- Helper Functions for Smart Table ---
-
-function appendStatusHistoryToReport_(body, rows, font) {
-  const historyRows = [];
-  const widths = [100, 90, 170, 90, 180];
-  const header = ['วันที่บันทึก', 'สถานะ', 'หมายเหตุ', 'ผู้บันทึก', 'รูปภาพ'];
-
-  (Array.isArray(rows) ? rows : []).forEach(function(row) {
-    const seq = row && row.data ? String(row.data[1] || '').trim() : '';
-    const item = row && row.data ? String(row.data[2] || '').trim() : '';
-    const history = row && Array.isArray(row.statusHistory) ? row.statusHistory : [];
-
-    history.forEach(function(log) {
-      const d = log.date instanceof Date && !isNaN(log.date.getTime())
-        ? Utilities.formatDate(log.date, 'GMT+7', 'dd/MM/yyyy\nHH:mm น.')
-        : String(log.date || '-');
-
-      historyRows.push({
-        data: [
-          d,
-          String(log.status || '-'),
-          String(log.note || '-'),
-          String(log.user || '-'),
-          ''
-        ],
-        imgIds: Array.isArray(log.imageIds) ? log.imageIds : [],
-        seqLabel: seq + (item ? ' - ' + item : '')
-      });
-    });
-  });
-
-  if (!historyRows.length) return;
-
-  body.appendPageBreak();
-  body.appendParagraph('ประวัติสถานะ')
-    .setHeading(DocumentApp.ParagraphHeading.HEADING3)
-    .setFontFamily(font)
-    .setFontSize(12)
-    .setBold(true);
-
-  let currentSeqLabel = '';
-  let currentTable = null;
-  let currentHeight = 35;
-  const pageLimit = 480;
-
-  const appendHistoryPageBreak = function() {
-    body.appendPageBreak();
-    currentHeight = 0;
-  };
-
-  const startHistoryTable = function(seqLabel) {
-    body.appendParagraph('เลขที่: ' + seqLabel)
-      .setFontFamily(font)
-      .setFontSize(10)
-      .setBold(true);
-    currentTable = body.appendTable();
-    formatTableHeader(currentTable, header, widths, font);
-    currentHeight += 55;
-  };
-
-  historyRows.forEach(function(row) {
-    if (row.seqLabel !== currentSeqLabel) {
-      currentSeqLabel = row.seqLabel;
-      if (currentHeight > 35 && currentHeight + 115 > pageLimit) {
-        appendHistoryPageBreak();
-      }
-      startHistoryTable(currentSeqLabel);
-    }
-
-    const hasImage = row.imgIds && row.imgIds.length > 0;
-    let estimatedRowHeight = hasImage ? 145 : 55;
-    const maxTextLen = row.data.reduce(function(max, txt) {
-      return Math.max(max, String(txt).length);
-    }, 0);
-    if (maxTextLen > 80) estimatedRowHeight += 35;
-
-    if (currentHeight + estimatedRowHeight > pageLimit) {
-      appendHistoryPageBreak();
-      startHistoryTable(currentSeqLabel);
-    }
-
-    appendRowToTable(currentTable, row, widths, font);
-    currentHeight += estimatedRowHeight;
-  });
-}
-
-function formatTableHeader(table, headerData, widths, font) {
-    const tr = table.appendTableRow();
-    headerData.forEach((text, i) => {
-        const cell = tr.appendTableCell(text);
-        cell.setBackgroundColor('#eeeeee')
-            .setPaddingTop(6).setPaddingBottom(6)
-            .setWidth(widths[i]);
-        
-        // จัด style paragraph ใน cell
-        if (cell.getNumChildren() > 0) {
-            const p = cell.getChild(0).asParagraph();
-            p.setAlignment(DocumentApp.HorizontalAlignment.CENTER)
-             .setFontFamily(font).setFontSize(9).setBold(true)
-             .setSpacingBefore(0).setSpacingAfter(0);
-        }
-    });
-}
-
-function appendRowToTable(table, rowData, widths, font) {
-    const tr = table.appendTableRow();
-    const cellFontSize = 9;
-    const padTop = 7;
-    const padBottom = 7;
-    const colCount = widths.length;
-    const imgColIdx = colCount - 1;
-    const imgColWidth = widths[imgColIdx];
-
-    // Text Columns
-    for (let c = 0; c < colCount - 1; c++) {
-        const cell = tr.appendTableCell('');
-        cell.setPaddingTop(padTop).setPaddingBottom(padBottom).setWidth(widths[c]);
-        
-        const align = (c === 0 || c === 1 || c === 4) 
-            ? DocumentApp.HorizontalAlignment.CENTER 
-            : DocumentApp.HorizontalAlignment.LEFT;
-            
-        helpWriteCellLines(cell, rowData.data[c], align, font, cellFontSize);
-    }
-
-    // Image Column
-    const imgCell = tr.appendTableCell('');
-    imgCell.setWidth(imgColWidth).setPaddingTop(2).setPaddingBottom(2);
-
-    while (imgCell.getNumChildren() > 0) imgCell.removeChild(imgCell.getChild(0));
-    const imgP = imgCell.appendParagraph('');
-    imgP.setAlignment(DocumentApp.HorizontalAlignment.CENTER)
-      .setSpacingBefore(0)
-      .setSpacingAfter(0);
-
-    const ids = (rowData.imgIds || []).filter(Boolean).slice(0, 3);
-    if (!ids.length) {
-        imgP.appendText('-').setFontFamily(font).setFontSize(cellFontSize);
-    } else {
-        const gap = ids.length > 1 ? 4 : 0;
-        const usableWidth = Math.max(44, imgColWidth - 8);
-        const usableHeight = 140;
-        let baseWidth = usableWidth;
-        if (ids.length === 2) {
-            baseWidth = Math.floor((usableWidth - gap) * 0.48);
-        } else if (ids.length >= 3) {
-            baseWidth = Math.floor((usableWidth - gap * 2) * 0.31);
-        }
-        baseWidth = Math.max(30, baseWidth);
-
-        ids.forEach(function(id, index) {
-            try {
-                const f = DriveApp.getFileById(id);
-                const inlineImg = imgP.appendInlineImage(f.getBlob());
-                const origW = inlineImg.getWidth();
-                const origH = inlineImg.getHeight();
-                if (origW > 0 && origH > 0) {
-                    const scaleByWidth = baseWidth / origW;
-                    const scaleByHeight = usableHeight / origH;
-                    const scale = Math.min(scaleByWidth, scaleByHeight);
-                    inlineImg.setWidth(Math.max(1, Math.floor(origW * scale)));
-                    inlineImg.setHeight(Math.max(1, Math.floor(origH * scale)));
-                } else {
-                    inlineImg.setWidth(baseWidth);
-                }
-                if (index < ids.length - 1) {
-                    imgP.appendText(' ');
-                }
-            } catch (e) {
-               // Ignore image load error
-            }
-        });
-    }
 }
 
 /* =========================
@@ -3984,7 +4441,7 @@ function helpWriteCellLines(cell, value, align, font, fontSize) {
     const p0 = cell.appendParagraph('-');
     p0.setAlignment(align || DocumentApp.HorizontalAlignment.LEFT);
     p0.setFontFamily(font).setFontSize(fontSize).setBold(false);
-    p0.setLineSpacing(1.1);
+    p0.setLineSpacing(1.0);
     return;
   }
 
@@ -3997,7 +4454,7 @@ function helpWriteCellLines(cell, value, align, font, fontSize) {
     const p = cell.appendParagraph(ln);
     p.setAlignment(align || DocumentApp.HorizontalAlignment.LEFT);
     p.setFontFamily(font).setFontSize(fontSize).setBold(false);
-    p.setLineSpacing(1.1);
+    p.setLineSpacing(1.0);
 
     // CHANGE: ลด spacing ระหว่าง paragraph ให้กระชับ
     try {

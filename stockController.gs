@@ -54,6 +54,150 @@ function getSparePartsList() {
   }
 }
 
+// [ANCHOR: SERVER-STOCK-RECENT-TRANSACTIONS]
+function getRecentStockTransactions(options) {
+  try {
+    var opts = (typeof options === 'object' && options !== null) ? options : { pageSize: Number(options || 10) };
+    var page = Number(opts.page || 1);
+    var pageSize = Number(opts.pageSize || 10);
+    var monthKey = String(opts.monthKey || '').trim();
+    var dateFromText = String(opts.dateFrom || '').trim();
+    var dateToText = String(opts.dateTo || '').trim();
+
+    if (page <= 0) page = 1;
+    if (pageSize <= 0) pageSize = 10;
+    if (pageSize > 100) pageSize = 100;
+
+    function parseLedgerDate(text) {
+      var match = String(text || '').match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);
+      if (!match) return null;
+      var y = Number(match[3]);
+      if (y < 2400) y += 543;
+      var m = Number(match[2]);
+      var d = Number(match[1]);
+      return {
+        yearBE: y,
+        month: m,
+        key: y + '-' + String(m).padStart(2, '0'),
+        date: new Date(y - 543, m - 1, d)
+      };
+    }
+
+    function parseInputDate(text, endOfDay) {
+      if (!text) return null;
+      var parts = String(text).split('-');
+      if (parts.length !== 3) return null;
+      var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      if (endOfDay) d.setHours(23, 59, 59, 999);
+      return d;
+    }
+
+    var dateFrom = parseInputDate(dateFromText, false);
+    var dateTo = parseInputDate(dateToText, true);
+    var sheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).getSheetByName('ประวัติสต็อกอะไหล่');
+    if (!sheet) throw new Error('ไม่พบชีต ประวัติสต็อกอะไหล่');
+
+    var lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      return { success: true, data: [], page: page, pageSize: pageSize, totalRows: 0, totalPages: 0 };
+    }
+
+    var values = sheet.getRange(2, 1, lastRow - 1, 10).getDisplayValues();
+    var result = [];
+    var totalRows = 0;
+    var startIndex = (page - 1) * pageSize;
+    var endIndex = startIndex + pageSize;
+
+    for (var i = values.length - 1; i >= 0; i--) {
+      var ledgerDate = parseLedgerDate(values[i][1]);
+      if (monthKey && monthKey !== 'all' && (!ledgerDate || ledgerDate.key !== monthKey)) continue;
+      if (dateFrom && (!ledgerDate || ledgerDate.date < dateFrom)) continue;
+      if (dateTo && (!ledgerDate || ledgerDate.date > dateTo)) continue;
+
+      if (totalRows >= startIndex && totalRows < endIndex) {
+        result.push({
+          transactionId: values[i][0],
+          transactionDate: values[i][1],
+          partId: values[i][2],
+          partName: values[i][3],
+          type: values[i][4],
+          qty: values[i][5],
+          totalValue: values[i][6],
+          refJob: values[i][7],
+          user: values[i][8],
+          note: values[i][9]
+        });
+      }
+      totalRows++;
+    }
+
+    return {
+      success: true,
+      data: result,
+      page: page,
+      pageSize: pageSize,
+      totalRows: totalRows,
+      totalPages: Math.ceil(totalRows / pageSize)
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+// [ANCHOR: SERVER-STOCK-REPAIR-JOB-OPTIONS]
+function getRepairJobOptionsForStock(limit) {
+  try {
+    var maxRows = Number(limit || 100);
+    if (maxRows <= 0) maxRows = 100;
+    if (maxRows > 200) maxRows = 200;
+
+    var sheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).getSheetByName(CONFIG.SHEET_NAME);
+    if (!sheet) throw new Error('ไม่พบชีต ' + CONFIG.SHEET_NAME);
+
+    var values = sheet.getDataRange().getValues();
+    var displayValues = sheet.getDataRange().getDisplayValues();
+    if (values.length <= 1) return { success: true, data: [] };
+
+    var headers = values[0].map(function(h) { return String(h || '').replace(/\s+/g, ' ').trim(); });
+    function idx(name) { return headers.indexOf(name); }
+    function idxAny(names) {
+      for (var i = 0; i < names.length; i++) {
+        var found = idx(names[i]);
+        if (found > -1) return found;
+      }
+      return -1;
+    }
+
+    var cSeq = idx('เลขที่');
+    var cDate = idx('วันที่');
+    var cRequester = idx('ชื่อผู้แจ้งซ่อม');
+    var cItem = idx('รายการแจ้งซ่อม');
+    var cLocation = idx('สถานที่');
+    var cStatus = idxAny(['สถานะล่าสุด', 'สถานะ']);
+
+    if (cSeq < 0) throw new Error('ไม่พบคอลัมน์ เลขที่');
+
+    var result = [];
+    for (var r = values.length - 1; r >= 1 && result.length < maxRows; r--) {
+      var seq = String(values[r][cSeq] || '').trim();
+      if (!seq) continue;
+
+      result.push({
+        sequenceNumber: seq,
+        date: cDate > -1 ? String(displayValues[r][cDate] || '').trim() : '',
+        requesterName: cRequester > -1 ? String(values[r][cRequester] || '').trim() : '',
+        repairItem: cItem > -1 ? String(values[r][cItem] || '').trim() : '',
+        location: cLocation > -1 ? String(values[r][cLocation] || '').trim() : '',
+        status: cStatus > -1 ? String(values[r][cStatus] || '').trim() : ''
+      });
+    }
+
+    return { success: true, data: result };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
 // [ANCHOR: SERVER-STOCK-NORMALIZE-PART-NAME]
 function normalizePartName(name) {
   return String(name || '')

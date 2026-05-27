@@ -840,6 +840,18 @@ body {
   max-width: none;
 }
 
+.stock-table-title > .stock-table-tools {
+  flex: 0 1 520px;
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.stock-history-open-btn {
+  white-space: nowrap;
+}
+
 .table-container {
   padding: 1.15rem 1.2rem 1.25rem;
   overflow-x: hidden;
@@ -905,6 +917,224 @@ body {
   background: oklch(0.95 0.06 26);
   color: var(--stock-ui-red);
   border-color: oklch(0.86 0.05 26);
+}
+
+.stock-history-type {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0.22rem 0.58rem;
+  border-radius: 999px;
+  border: 1px solid oklch(0.82 0.03 238);
+  background: oklch(0.975 0.012 250);
+  color: var(--stock-ui-text);
+  font-size: 0.78rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.stock-history-type.in {
+  background: oklch(0.94 0.06 138);
+  color: oklch(0.39 0.12 138);
+  border-color: oklch(0.84 0.07 138);
+}
+
+.stock-history-type.out {
+  background: oklch(0.95 0.055 26);
+  color: var(--stock-ui-red);
+  border-color: oklch(0.86 0.05 26);
+}
+
+.stock-history-type.repair {
+  background: oklch(0.955 0.045 292);
+  color: oklch(0.42 0.16 292);
+  border-color: oklch(0.84 0.05 292);
+}
+
+.stock-table-title > .stock-history-muted {
+  flex: 1 0 100%;
+  color: var(--stock-ui-muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+  margin-top: -0.35rem;
+  max-width: 72ch;
+}
+
+.stock-drawer-open {
+  overflow: hidden;
+}
+
+.stock-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  display: flex;
+  justify-content: flex-end;
+  background: oklch(0.25 0.03 250 / 0.36);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+
+.stock-drawer-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.stock-history-drawer {
+  width: min(520px, calc(100vw - 24px));
+  height: 100%;
+  background: var(--stock-ui-surface);
+  border-left: 1px solid var(--stock-ui-line);
+  box-shadow: -18px 0 36px oklch(0.31 0.04 250 / 0.18);
+  transform: translateX(100%);
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.stock-drawer-overlay.active .stock-history-drawer {
+  transform: translateX(0);
+}
+
+.stock-drawer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.05rem 1.15rem;
+  border-bottom: 1px solid var(--stock-ui-line);
+  background: linear-gradient(135deg, oklch(0.965 0.028 238), oklch(0.975 0.034 184));
+}
+
+.stock-drawer-title h2 {
+  margin: 0 0 0.28rem;
+  color: var(--stock-ui-text);
+  font-size: 1.08rem;
+  line-height: 1.25;
+  font-weight: 800;
+}
+
+.stock-drawer-title p {
+  margin: 0;
+  color: var(--stock-ui-muted);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.stock-drawer-close {
+  min-width: 42px;
+  min-height: 42px;
+  border-radius: 8px;
+  border: 1px solid var(--stock-ui-line);
+  background: var(--stock-ui-surface);
+  color: var(--stock-ui-text);
+  cursor: pointer;
+}
+
+.stock-drawer-body {
+  min-height: 0;
+  overflow: auto;
+  padding: 0.95rem;
+}
+
+.stock-history-filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem;
+  margin-bottom: 0.9rem;
+}
+
+.stock-history-filters label {
+  display: grid;
+  gap: 0.3rem;
+  color: var(--stock-ui-text);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.stock-history-filters select,
+.stock-history-filters input {
+  min-height: 42px;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--stock-ui-line);
+  border-radius: 8px;
+  background: var(--stock-ui-surface);
+  color: var(--stock-ui-text);
+  padding: 0 0.75rem;
+  font-size: 0.92rem;
+}
+
+.stock-history-filter-actions {
+  align-self: end;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.stock-drawer-body .table-container {
+  padding: 0;
+  overflow-x: visible;
+}
+
+.stock-drawer-body .table-container table {
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  table-layout: auto;
+}
+
+.stock-drawer-body .table-container thead {
+  display: none;
+}
+
+.stock-drawer-body .table-container tbody {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.stock-drawer-body .table-container tr {
+  display: block;
+  border: 1px solid var(--stock-ui-line);
+  border-radius: 8px;
+  background: var(--stock-ui-surface);
+  padding: 0.7rem 0.8rem;
+}
+
+.stock-drawer-body .table-container td {
+  display: grid;
+  grid-template-columns: minmax(112px, 34%) 1fr;
+  gap: 0.65rem;
+  align-items: start;
+  border-bottom: 1px solid oklch(0.9 0.015 238);
+  padding: 0.5rem 0;
+}
+
+.stock-drawer-body .table-container td:last-child {
+  border-bottom: 0;
+}
+
+.stock-drawer-body .table-container td::before {
+  content: attr(data-label);
+  color: var(--stock-ui-muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.stock-history-pagination {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-top: 0.9rem;
+  color: var(--stock-ui-muted);
+  font-size: 0.88rem;
+}
+
+.stock-history-pagination > div {
+  display: flex;
+  gap: 0.5rem;
 }
 
 .stock-edit-btn {
@@ -1005,9 +1235,26 @@ body {
     flex: 1 0 100%;
   }
 
+  .stock-table-title > .stock-table-tools {
+    flex: 1 0 100%;
+    grid-template-columns: 1fr;
+  }
+
   .stock-table-title .search-input {
     max-width: none;
     min-width: 0;
+  }
+
+  .stock-history-muted {
+    display: none;
+  }
+
+  .stock-history-drawer {
+    width: 100vw;
+  }
+
+  .stock-history-filters {
+    grid-template-columns: 1fr;
   }
 
   .table-container {
@@ -1188,7 +1435,9 @@ body {
 
       <div class="form-group" id="jobRefGroup" style="display:none;">
         <label>อ้างอิงเลขที่แจ้งซ่อม</label>
-        <input type="text" id="transRefJob" placeholder="ตัวอย่าง SDUL-25690124-001">
+        <input type="text" id="transRefJob" list="repairJobOptions" placeholder="เลือกหรือพิมพ์เลขที่แจ้งซ่อม">
+        <datalist id="repairJobOptions"></datalist>
+        <small id="repairJobOptionsStatus" class="stock-history-muted"></small>
       </div>
     </div>
 
@@ -1219,13 +1468,18 @@ body {
       </button>
     </div>
 
+  </form>
+
 <!-- ส่วนที่ 3: ตารางรายการอะไหล่และยอดคงเหลือ -->
 <!-- [ANCHOR: STOCK-TABLE-CARD-HEADER] -->
 <div class="card stock-panel stock-table-panel">
   <div class="table-header-flex stock-panel-head stock-table-title">
     <h2 class="header-title"><i class="fas fa-list"></i> ทะเบียนอะไหล่และยอดคงเหลือ</h2>
-    <div>
+    <div class="stock-table-tools">
       <input type="text" id="searchStock" class="search-input ui-input" placeholder="ค้นหา รหัส, ชื่อ, หมวดหมู่..." onkeyup="filterStockTable()" aria-label="ค้นหาข้อมูลอะไหล่">
+      <button type="button" class="stock-action-btn stock-history-open-btn" onclick="openStockHistoryDrawer()">
+        <i class="fas fa-clock-rotate-left"></i> ประวัติสต็อก
+      </button>
     </div>
   </div>
 
@@ -1245,6 +1499,73 @@ body {
         <tr><td colspan="6" style="text-align: center;">กำลังโหลดข้อมูล...</td></tr>
       </tbody>
     </table>
+  </div>
+</div>
+
+<!-- [ANCHOR: STOCK-RECENT-HISTORY-CARD] -->
+<div id="stockHistoryDrawer" class="stock-drawer-overlay" aria-hidden="true" onclick="if (event.target === this) closeStockHistoryDrawer()">
+  <div class="stock-history-drawer" role="dialog" aria-modal="true" aria-labelledby="stockHistoryDrawerTitle">
+    <div class="stock-drawer-head">
+      <div class="stock-drawer-title">
+        <h2 id="stockHistoryDrawerTitle"><i class="fas fa-clock-rotate-left"></i> ประวัติรายการสต็อกล่าสุด</h2>
+        <p>รับเข้า เบิกออก ใช้ในงานซ่อม และคืนเข้าสต็อกล่าสุด</p>
+      </div>
+      <button type="button" class="stock-drawer-close" onclick="closeStockHistoryDrawer()" aria-label="ปิดประวัติสต็อก">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="stock-drawer-body">
+      <div class="stock-history-filters">
+        <label>
+          เดือน
+          <select id="stockHistoryMonthSelect" onchange="applyStockHistoryFilters()">
+            <option value="">ทั้งหมด</option>
+          </select>
+        </label>
+        <div class="stock-history-filter-actions">
+          <button type="button" class="stock-action-btn" onclick="clearStockHistoryFilters()">
+            <i class="fas fa-rotate-left"></i> ล้างตัวกรอง
+          </button>
+        </div>
+        <label>
+          จากวันที่
+          <input type="date" id="stockHistoryDateFrom" onchange="applyStockHistoryFilters()">
+        </label>
+        <label>
+          ถึงวันที่
+          <input type="date" id="stockHistoryDateTo" onchange="applyStockHistoryFilters()">
+        </label>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>วันที่</th>
+              <th>รหัสรายการ</th>
+              <th>อะไหล่</th>
+              <th>ประเภท</th>
+              <th>จำนวน</th>
+              <th>อ้างอิง/หมายเหตุ</th>
+            </tr>
+          </thead>
+          <tbody id="stockHistoryTbody">
+            <tr><td colspan="6" class="stock-empty-state">กำลังโหลดประวัติรายการสต็อก...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="stockHistoryPagination" class="stock-history-pagination">
+        <span id="stockHistoryPageInfo"></span>
+        <div>
+          <button type="button" id="btnPrevStockHistory" onclick="changeStockHistoryPage(-1)" class="btn btn-secondary" style="min-width: 80px; padding: 0.5rem 1rem;">
+            <i class="fas fa-chevron-left"></i> ก่อนหน้า
+          </button>
+          <button type="button" id="btnNextStockHistory" onclick="changeStockHistoryPage(1)" class="btn btn-secondary" style="min-width: 80px; padding: 0.5rem 1rem;">
+            ถัดไป <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1356,6 +1677,7 @@ document.addEventListener('DOMContentLoaded', function() {
   var partSelect = document.getElementById('partSelect');
   var transType = document.getElementById('transType');
   var transForm = document.getElementById('transForm');
+  var editPartForm = document.getElementById('editPartForm');
 
   if (partSelect) {
     partSelect.addEventListener('change', function() {
@@ -1373,6 +1695,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
       if (document.getElementById('transRefJob')) {
         document.getElementById('transRefJob').required = showRef;
+      }
+
+      if (showRef) {
+        loadRepairJobOptions();
       }
 
       toggleNewPartSection();
@@ -1440,6 +1766,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
           toggleNewPartSection();
           loadPartsData();
+          refreshStockHistoryIfOpen();
           loadReportMonthOptions();
         })
         .withFailureHandler(function(err) {
@@ -1448,6 +1775,43 @@ document.addEventListener('DOMContentLoaded', function() {
           showAlert('error', err && err.message ? err.message : 'เกิดข้อผิดพลาดในการบันทึกรายการ');
         })
         .processStockTransaction(payload);
+    });
+  }
+
+  if (editPartForm) {
+    editPartForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      if (editPartForm.dataset.submitting === '1') return;
+      editPartForm.dataset.submitting = '1';
+      setSubmitState(editPartForm, true);
+
+      var partId = document.getElementById('editPartId').value;
+      var partName = document.getElementById('editPartName').value.trim();
+      var category = document.getElementById('editPartCategory').value.trim();
+      var unit = document.getElementById('editPartUnit').value.trim();
+      var reorderPoint = document.getElementById('editPartReorder').value;
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          editPartForm.dataset.submitting = '0';
+          setSubmitState(editPartForm, false);
+
+          if (!res || !res.success) {
+            showAlert('error', (res && res.error) ? res.error : 'บันทึกการแก้ไขไม่สำเร็จ');
+            return;
+          }
+
+          closeEditModal();
+          showAlert('success', 'บันทึกการแก้ไขสำเร็จ');
+          loadPartsData();
+        })
+        .withFailureHandler(function(err) {
+          editPartForm.dataset.submitting = '0';
+          setSubmitState(editPartForm, false);
+          showAlert('error', err && err.message ? err.message : 'เกิดข้อผิดพลาดในการบันทึกการแก้ไข');
+        })
+        .updateSparePartRow(partId, partName, category, unit, reorderPoint);
     });
   }
 });
@@ -1508,6 +1872,50 @@ function loadReportMonthOptions(isRetry) {
       if (btn) btn.disabled = true;
     })
     .getAvailableStockReportMonths();
+}
+
+function loadRepairJobOptions() {
+  var list = document.getElementById('repairJobOptions');
+  var status = document.getElementById('repairJobOptionsStatus');
+  if (!list || list.dataset.loaded === '1' || list.dataset.loading === '1') return;
+
+  list.dataset.loading = '1';
+  if (status) status.textContent = 'กำลังโหลดรายการแจ้งซ่อม...';
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      list.dataset.loading = '0';
+      console.log('loadRepairJobOptions response=', res);
+
+      if (!res || !res.success) {
+        if (status) status.textContent = (res && res.error) ? res.error : 'โหลดรายการแจ้งซ่อมไม่สำเร็จ';
+        return;
+      }
+
+      list.innerHTML = '';
+      (res.data || []).forEach(function(item) {
+        var option = document.createElement('option');
+        var seq = String(item.sequenceNumber || '').trim();
+        if (!seq) return;
+
+        option.value = seq;
+        option.label = [
+          item.repairItem || '',
+          item.location || '',
+          item.status || ''
+        ].filter(Boolean).join(' | ');
+        list.appendChild(option);
+      });
+
+      list.dataset.loaded = '1';
+      if (status) status.textContent = list.options.length ? 'เลือกจากรายการแจ้งซ่อมล่าสุด หรือพิมพ์เลขที่เองได้' : 'ยังไม่มีรายการแจ้งซ่อมให้เลือก';
+    })
+    .withFailureHandler(function(err) {
+      list.dataset.loading = '0';
+      console.log('loadRepairJobOptions failure=', err);
+      if (status) status.textContent = err && err.message ? err.message : 'โหลดรายการแจ้งซ่อมไม่สำเร็จ';
+    })
+    .getRepairJobOptionsForStock(100);
 }
 
 function toggleNewPartSection() {
@@ -1648,6 +2056,181 @@ function loadPartsData() {
     .getSparePartsList();
 }
 
+function loadRecentStockHistory() {
+  var tbody = document.getElementById('stockHistoryTbody');
+  var pagination = document.getElementById('stockHistoryPagination');
+  var filters = getStockHistoryFilters();
+
+  if (tbody) {
+    tbody.innerHTML = '<tr><td colspan="6" class="stock-empty-state">กำลังโหลดประวัติรายการสต็อก...</td></tr>';
+  }
+  if (pagination) pagination.style.display = 'none';
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res && res.success) {
+        renderRecentStockHistory(res.data || [], null, res);
+      } else {
+        renderRecentStockHistory([], (res && res.error) ? res.error : 'ไม่สามารถโหลดประวัติรายการสต็อกได้');
+      }
+    })
+    .withFailureHandler(function(err) {
+      renderRecentStockHistory([], err && err.message ? err.message : 'โหลดประวัติรายการสต็อกไม่สำเร็จ');
+    })
+    .getRecentStockTransactions({
+      page: currentStockHistoryPage,
+      pageSize: getResponsiveRowsPerPage(),
+      monthKey: filters.monthKey,
+      dateFrom: filters.dateFrom,
+      dateTo: filters.dateTo
+    });
+}
+
+function openStockHistoryDrawer() {
+  var drawer = document.getElementById('stockHistoryDrawer');
+  if (!drawer) return;
+
+  drawer.classList.add('active');
+  drawer.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('stock-drawer-open');
+  loadStockHistoryMonthOptions();
+  loadRecentStockHistory();
+}
+
+function closeStockHistoryDrawer() {
+  var drawer = document.getElementById('stockHistoryDrawer');
+  if (!drawer) return;
+
+  drawer.classList.remove('active');
+  drawer.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('stock-drawer-open');
+}
+
+function refreshStockHistoryIfOpen() {
+  var drawer = document.getElementById('stockHistoryDrawer');
+  if (drawer && drawer.classList.contains('active')) {
+    currentStockHistoryPage = 1;
+    loadRecentStockHistory();
+  }
+}
+
+function getStockHistoryFilters() {
+  var monthSelect = document.getElementById('stockHistoryMonthSelect');
+  var dateFrom = document.getElementById('stockHistoryDateFrom');
+  var dateTo = document.getElementById('stockHistoryDateTo');
+  return {
+    monthKey: monthSelect ? monthSelect.value : '',
+    dateFrom: dateFrom ? dateFrom.value : '',
+    dateTo: dateTo ? dateTo.value : ''
+  };
+}
+
+function applyStockHistoryFilters() {
+  currentStockHistoryPage = 1;
+  loadRecentStockHistory();
+}
+
+function clearStockHistoryFilters() {
+  var monthSelect = document.getElementById('stockHistoryMonthSelect');
+  var dateFrom = document.getElementById('stockHistoryDateFrom');
+  var dateTo = document.getElementById('stockHistoryDateTo');
+  if (monthSelect) monthSelect.value = '';
+  if (dateFrom) dateFrom.value = '';
+  if (dateTo) dateTo.value = '';
+  applyStockHistoryFilters();
+}
+
+function loadStockHistoryMonthOptions() {
+  var sel = document.getElementById('stockHistoryMonthSelect');
+  if (!sel || stockHistoryMonthsLoaded) return;
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      stockHistoryMonthsLoaded = true;
+      sel.innerHTML = '<option value="">ทั้งหมด</option>';
+      if (res && res.success && Array.isArray(res.months)) {
+        res.months.forEach(function(m) {
+          var opt = document.createElement('option');
+          opt.value = m.yearBE + '-' + String(m.month).padStart(2, '0');
+          opt.textContent = m.label;
+          sel.appendChild(opt);
+        });
+      }
+    })
+    .withFailureHandler(function() {
+      stockHistoryMonthsLoaded = true;
+    })
+    .getAvailableStockReportMonths();
+}
+
+function renderRecentStockHistory(rows, errorMessage, meta) {
+  var tbody = document.getElementById('stockHistoryTbody');
+  var pagination = document.getElementById('stockHistoryPagination');
+  var pageInfo = document.getElementById('stockHistoryPageInfo');
+  var btnPrev = document.getElementById('btnPrevStockHistory');
+  var btnNext = document.getElementById('btnNextStockHistory');
+  if (!tbody) return;
+
+  if (errorMessage) {
+    tbody.innerHTML = '<tr><td colspan="6" class="stock-empty-state">' + escapeStockHtml(errorMessage) + '</td></tr>';
+    if (pagination) pagination.style.display = 'none';
+    return;
+  }
+
+  var rowsPerPage = Number((meta && meta.pageSize) || getResponsiveRowsPerPage());
+  var totalRows = Number((meta && meta.totalRows) || rows.length);
+  var totalPages = Number((meta && meta.totalPages) || Math.ceil(totalRows / rowsPerPage) || 1);
+  currentStockHistoryPage = Number((meta && meta.page) || currentStockHistoryPage || 1);
+
+  if (!rows || rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="stock-empty-state">ยังไม่มีประวัติรายการสต็อก</td></tr>';
+    if (pagination) pagination.style.display = 'none';
+    return;
+  }
+
+  if (currentStockHistoryPage < 1) currentStockHistoryPage = 1;
+  if (currentStockHistoryPage > totalPages) currentStockHistoryPage = totalPages;
+  var startIndex = (currentStockHistoryPage - 1) * rowsPerPage;
+  var endIndex = Math.min(startIndex + rows.length, totalRows);
+
+  tbody.innerHTML = '';
+  rows.forEach(function(item) {
+    var type = String(item.type || '');
+    var typeClass = 'stock-history-type';
+    if (type === 'รับเข้า' || type === 'คืนเข้า') typeClass += ' in';
+    if (type === 'เบิกออก') typeClass += ' out';
+    if (type === 'ใช้ในงานซ่อม') typeClass += ' repair';
+
+    var refText = item.refJob ? String(item.refJob) : '-';
+    var noteText = item.note ? String(item.note) : '';
+    var tr = document.createElement('tr');
+
+    tr.innerHTML =
+      '<td data-label="วันที่">' + escapeStockHtml(item.transactionDate || '-') + '</td>' +
+      '<td data-label="รหัสรายการ"><span class="code">' + escapeStockHtml(item.transactionId || '-') + '</span></td>' +
+      '<td data-label="อะไหล่"><span class="cell-clamp">' + escapeStockHtml(item.partName || '-') + '</span><small>' + escapeStockHtml(item.partId || '-') + '</small></td>' +
+      '<td data-label="ประเภท"><span class="' + typeClass + '">' + escapeStockHtml(type || '-') + '</span></td>' +
+      '<td data-label="จำนวน"><b>' + escapeStockHtml(item.qty || 0) + '</b></td>' +
+      '<td data-label="อ้างอิง/หมายเหตุ"><span class="cell-clamp">' + escapeStockHtml(refText) + '</span><small>' + escapeStockHtml(noteText) + '</small></td>';
+
+    tbody.appendChild(tr);
+  });
+
+  if (pagination) pagination.style.display = totalRows > rowsPerPage ? 'flex' : 'none';
+  if (pageInfo) pageInfo.textContent = 'แสดง ' + (startIndex + 1) + ' - ' + endIndex + ' จาก ' + totalRows + ' รายการ';
+  if (btnPrev) btnPrev.disabled = currentStockHistoryPage <= 1;
+  if (btnNext) btnNext.disabled = currentStockHistoryPage >= totalPages;
+}
+
+function escapeStockHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function renderTableAndDropdown(data) {
   var select = document.getElementById('partSelect');
   var dashTotalParts = document.getElementById('dashTotalParts');
@@ -1709,14 +2292,15 @@ function renderStockTablePage() {
 
   if (pagination) pagination.style.display = 'flex';
 
+  var rowsPerPage = getResponsiveRowsPerPage();
   var totalRows = filteredStockData.length;
-  var totalPages = Math.ceil(totalRows / rowsPerStockPage) || 1;
+  var totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
 
   if (currentStockPage < 1) currentStockPage = 1;
   if (currentStockPage > totalPages) currentStockPage = totalPages;
 
-  var startIndex = (currentStockPage - 1) * rowsPerStockPage;
-  var endIndex = Math.min(startIndex + rowsPerStockPage, totalRows);
+  var startIndex = (currentStockPage - 1) * rowsPerPage;
+  var endIndex = Math.min(startIndex + rowsPerPage, totalRows);
   var currentData = filteredStockData.slice(startIndex, endIndex);
 
   tbody.innerHTML = '';
@@ -1862,11 +2446,21 @@ document.addEventListener('DOMContentLoaded', function() {
 let allStockData = [];
 let filteredStockData =[];
 let currentStockPage = 1;
-const rowsPerStockPage = 5;
+let currentStockHistoryPage = 1;
+let stockHistoryMonthsLoaded = false;
+
+function getResponsiveRowsPerPage() {
+  return (window.matchMedia && window.matchMedia('(max-width: 560px)').matches) ? 5 : 10;
+}
 
 function changeStockPage(direction) {
   currentStockPage += direction;
   renderStockTablePage();
+}
+
+function changeStockHistoryPage(direction) {
+  currentStockHistoryPage += direction;
+  loadRecentStockHistory();
 }
 
     function showAlert(type, msg) {

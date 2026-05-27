@@ -2161,7 +2161,7 @@ footer p {
 
             <div class="dialog-buttons">
                 <button type="button" class="dialog-btn cancel" onclick="closeAssignModal()">ยกเลิก</button>
-                <button type="submit" class="dialog-btn primary" id="saveAssignmentBtn">
+                <button type="button" class="dialog-btn primary" id="saveAssignmentBtn" onclick="confirmAssignTask(event)">
                     <i class="fas fa-check"></i> ยืนยันการมอบหมาย
                 </button>
             </div>
@@ -2180,7 +2180,7 @@ footer p {
         <p style="color: #b91c1c; font-weight: 500; margin-top: 1rem;">การกระทำนี้ไม่สามารถย้อนกลับได้ ข้อมูลทั้งหมดที่เกี่ยวข้องจะถูกลบอย่างถาวร</p>
         <div class="dialog-buttons">
             <button type="button" class="dialog-btn cancel" onclick="closeDeleteModal()">ยกเลิก</button>
-            <button type="button" class="dialog-btn danger" id="confirmDeleteBtn">
+            <button type="button" class="dialog-btn danger" id="confirmDeleteBtn" onclick="confirmDeleteRepair(this)">
                 <i class="fas fa-trash"></i> ยืนยันการลบ
             </button>
         </div>
@@ -2295,6 +2295,11 @@ function normalizeBuddhistYear(year) {
 
 let tableRenderToken = 0;
 let dashboardLoadToken = 0;
+let assignRequestToken = 0;
+let assignRequestBusy = false;
+let deleteRequestToken = 0;
+let deleteRequestBusy = false;
+let monthlyReportRequestToken = 0;
 
 function isMobileViewport() {
   return window.matchMedia('(max-width: 768px)').matches;
@@ -4255,6 +4260,9 @@ function showImageModal(imageUrl) {
             activeSequenceNumber = sequenceNumber;
             document.getElementById('deleteSequenceNumber').textContent = item.sequenceNumber;
             document.getElementById('deleteRepairItem').textContent = item.repairItem;
+            const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+            if (confirmDeleteBtn) confirmDeleteBtn.disabled = false;
+            deleteRequestBusy = false;
             document.getElementById('deleteModal').classList.add('active');
         }
 
@@ -4292,6 +4300,8 @@ function showImageModal(imageUrl) {
         function closeDeleteModal() { 
             document.getElementById('deleteModal')?.classList.remove('active'); 
             activeSequenceNumber = null; 
+            deleteRequestToken++;
+            deleteRequestBusy = false;
         }
 
         function closeAssignModal() { 
@@ -4330,11 +4340,144 @@ function showImageModal(imageUrl) {
             }
         }
 
+        function confirmAssignTask(e) {
+            if (e && e.preventDefault) e.preventDefault();
+
+            const form = document.getElementById('assignForm');
+            const assignBtn = document.getElementById('saveAssignmentBtn');
+            if (!form || !assignBtn) return;
+
+            const assignBtnHtml = assignBtn.innerHTML;
+            const restoreAssignBtn = () => {
+                assignRequestBusy = false;
+                assignBtn.disabled = false;
+                assignBtn.innerHTML = assignBtnHtml;
+            };
+
+            if (assignRequestBusy || assignBtn.disabled) return;
+
+            console.log('[ASSIGN] confirmAssignTask clicked', {
+                type: e && e.type,
+                target: e && e.target ? e.target.id || e.target.tagName : null,
+                currentTarget: e && e.currentTarget ? e.currentTarget.id || e.currentTarget.tagName : null
+            });
+
+            const sequenceNumber = ((form.elements.sequenceNumber && form.elements.sequenceNumber.value) || activeSequenceNumber || '').trim();
+            const requestSequenceNumber = ++assignRequestToken;
+            const assignedTechnician = ((form.elements.technician && form.elements.technician.value) || '').trim();
+            const requestCurrentUser = currentUser ? JSON.parse(JSON.stringify(currentUser)) : null;
+            const requestSessionToken = currentUser && currentUser.sessionToken ? String(currentUser.sessionToken).trim() : '';
+
+            if (!sequenceNumber) {
+                showAlert('error', 'ไม่พบเลขที่ใบแจ้งซ่อม');
+                return;
+            }
+
+            if (!assignedTechnician) {
+                showAlert('error', 'กรุณาเลือกช่างผู้รับผิดชอบ');
+                return;
+            }
+
+            if (typeof google === 'undefined' || !google.script || !google.script.run) {
+                showAlert('error', 'ไม่พบ google.script.run');
+                console.error('[ASSIGN] google.script.run is not available');
+                return;
+            }
+
+            assignRequestBusy = true;
+            assignBtn.disabled = true;
+            assignBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังมอบหมาย...';
+            showAlert('info', 'กำลังบันทึกการมอบหมาย...');
+
+            const payload = {
+                sequenceNumber: sequenceNumber,
+                newStatus: 'กำลังดำเนินการ',
+                technician: assignedTechnician,
+                currentUser: requestCurrentUser,
+                sessionToken: requestSessionToken
+            };
+
+            console.log('[ASSIGN] updateRepairStatus payload:', payload);
+
+            google.script.run
+                .withSuccessHandler(function(result) {
+                    if (requestSequenceNumber !== assignRequestToken) return;
+                    restoreAssignBtn();
+                    console.log('[ASSIGN] updateRepairStatus result:', result);
+                    if (result && result.success) {
+                        showAlert('success', 'มอบหมายงานเรียบร้อยแล้ว');
+                        closeAssignModal();
+                        loadData();
+                    } else {
+                        showAlert('error', 'เกิดข้อผิดพลาด: ' + (result ? result.error : 'ไม่ทราบสาเหตุ'));
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    if (requestSequenceNumber !== assignRequestToken) return;
+                    restoreAssignBtn();
+                    console.error('[ASSIGN] updateRepairStatus failure:', error);
+                    showAlert('error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + (error.message || error));
+                })
+                .updateRepairStatus(payload);
+        }
+
+        window.confirmAssignTask = confirmAssignTask;
+
+        function confirmDeleteRepair(btn) {
+            const confirmBtn = btn || document.getElementById('confirmDeleteBtn');
+            if (!activeSequenceNumber || deleteRequestBusy || (confirmBtn && confirmBtn.disabled)) return;
+            if (typeof google === 'undefined' || !google.script || !google.script.run) {
+                showAlert('error', 'ไม่พบ google.script.run');
+                console.error('[DELETE] google.script.run is not available');
+                return;
+            }
+
+            const requestSequenceNumber = activeSequenceNumber;
+            const requestToken = ++deleteRequestToken;
+            const requestUser = currentUser ? JSON.parse(JSON.stringify(currentUser)) : null;
+
+            console.log('[DELETE] request:', {
+                sequenceNumber: requestSequenceNumber,
+                username: requestUser && requestUser.username,
+                role: requestUser && requestUser.role,
+                hasSessionToken: !!(requestUser && requestUser.sessionToken)
+            });
+
+            showAlert('info', 'กำลังลบข้อมูล...');
+            deleteRequestBusy = true;
+            if (confirmBtn) confirmBtn.disabled = true;
+
+            google.script.run
+                .withSuccessHandler(function(result) {
+                    if (requestToken !== deleteRequestToken) return;
+                    deleteRequestBusy = false;
+                    if (confirmBtn) confirmBtn.disabled = false;
+                    console.log('[DELETE] result:', result);
+                    if (result && result.success) {
+                        showAlert('success', 'ลบรายการเรียบร้อยแล้ว');
+                        closeDeleteModal();
+                        loadData();
+                    } else {
+                        showAlert('error', 'เกิดข้อผิดพลาด: ' + (result ? result.error : 'ไม่ทราบสาเหตุ'));
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    if (requestToken !== deleteRequestToken) return;
+                    deleteRequestBusy = false;
+                    if (confirmBtn) confirmBtn.disabled = false;
+                    console.error('[DELETE] failure:', error);
+                    showAlert('error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + ((error && error.message) ? error.message : error));
+                })
+                .deleteRepair(requestSequenceNumber, requestUser);
+        }
+
+        window.confirmDeleteRepair = confirmDeleteRepair;
+
         // ---------------------------------------------------------
         // 5. ⚡ EVENT LISTENERS (จัดการการกดปุ่มต่างๆ)
         // ---------------------------------------------------------
         
-        document.addEventListener('DOMContentLoaded', () => {
+        function bindDashboardActionForms() {
             // เราใช้ DOMContentLoaded หรือตรวจสอบ element ก่อน addEventListener เพื่อความชัวร์
 
             // 5.1 ฟอร์มแก้ไขสถานะ (Edit Form)
@@ -4403,8 +4546,8 @@ function showImageModal(imageUrl) {
 
                     google.script.run
                         .withSuccessHandler(function(result) {
-                            restoreSaveBtn();
                             if (form.elements.sequenceNumber.value !== requestSequenceNumber) return;
+                            restoreSaveBtn();
                             if (result && result.success) {
                                 showAlert('success', 'อัปเดตสถานะเรียบร้อยแล้ว');
                                 closeEditModal();
@@ -4414,8 +4557,8 @@ function showImageModal(imageUrl) {
                             }
                         })
                         .withFailureHandler(function(error) {
-                            restoreSaveBtn();
                             if (form.elements.sequenceNumber.value !== requestSequenceNumber) return;
+                            restoreSaveBtn();
                             showAlert('error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error.message);
                         })
                         .updateRepairStatus(payload); // [แก้ไข: ส่งก้อน Payload ไปเลย]
@@ -4424,89 +4567,36 @@ function showImageModal(imageUrl) {
 
             // 5.2 ปุ่มยืนยันการลบ (Confirm Delete)
             const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
-            if (confirmDeleteBtn) {
+            if (confirmDeleteBtn && confirmDeleteBtn.dataset.deleteClickBound !== '1') {
                 confirmDeleteBtn.addEventListener('click', function() {
-                    if (!activeSequenceNumber) return;
-                    
-                    showAlert('info', 'กำลังลบข้อมูล...');
-                    this.disabled = true;
-                    
-                    google.script.run
-                        .withSuccessHandler((result) => {
-                            this.disabled = false;
-                            if (result && result.success) {
-                                showAlert('success', 'ลบรายการเรียบร้อยแล้ว');
-                                closeDeleteModal();
-                                loadData(); 
-                            } else {
-                                showAlert('error', 'เกิดข้อผิดพลาด: ' + (result ? result.error : 'ไม่ทราบสาเหตุ'));
-                            }
-                        })
-                        .withFailureHandler((error) => {
-                            this.disabled = false;
-                            showAlert('error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error.message);
-                        })
-                        .deleteRepair(activeSequenceNumber, currentUser);
+                    confirmDeleteRepair(this);
                 });
+                confirmDeleteBtn.dataset.deleteClickBound = '1';
             }
 
             // 5.3 ฟอร์มมอบหมายงาน (Assign Form)
             const assignForm = document.getElementById('assignForm');
-            if (assignForm) {
-                assignForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    const form = e.target;
-                    const sequenceNumber = form.elements.sequenceNumber.value;
-                    const assignedTechnician = form.elements.technician.value;
-                    
-                    const newStatus = "กำลังดำเนินการ";
-                    const notes = null;
-
-                    if (!assignedTechnician) {
-                        showAlert('error', 'กรุณาเลือกช่างผู้รับผิดชอบ');
-                        return;
-                    }
-
-                    showAlert('info', 'กำลังบันทึกการมอบหมาย...');
-                    const assignBtn = document.getElementById('saveAssignmentBtn');
-                    const assignBtnHtml = assignBtn ? assignBtn.innerHTML : '';
-                    if (assignBtn) {
-                        assignBtn.disabled = true;
-                        assignBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังมอบหมาย...';
-                    }
-                    const payload = {
-                        sequenceNumber: sequenceNumber,
-                        newStatus: newStatus,
-                        technician: assignedTechnician,
-                        notes: notes,
-                        currentUser: currentUser
-                    };
-
-                    google.script.run
-                        .withSuccessHandler(function(result) {
-                            if (assignBtn) {
-                                assignBtn.disabled = false;
-                                assignBtn.innerHTML = assignBtnHtml;
-                            }
-                            if (result && result.success) {
-                                showAlert('success', 'มอบหมายงานเรียบร้อยแล้ว');
-                                closeAssignModal();
-                                loadData();
-                            } else {
-                                showAlert('error', 'เกิดข้อผิดพลาด: ' + (result ? result.error : 'ไม่ทราบสาเหตุ'));
-                            }
-                        })
-                        .withFailureHandler(function(error) {
-                            if (assignBtn) {
-                                assignBtn.disabled = false;
-                                assignBtn.innerHTML = assignBtnHtml;
-                            }
-                            showAlert('error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error.message);
-                        })
-                        .updateRepairStatus(payload);
+            if (assignForm && assignForm.dataset.assignSubmitBound !== '1') {
+                assignForm.addEventListener('submit', function(ev) {
+                    confirmAssignTask(ev);
                 });
+                assignForm.dataset.assignSubmitBound = '1';
             }
-        });
+
+            const assignBtn = document.getElementById('saveAssignmentBtn');
+            if (assignBtn && assignBtn.dataset.assignClickBound !== '1') {
+                assignBtn.addEventListener('click', function(ev) {
+                    confirmAssignTask(ev);
+                });
+                assignBtn.dataset.assignClickBound = '1';
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bindDashboardActionForms);
+        } else {
+            bindDashboardActionForms();
+        }
                    // === DEBUG FUNCTIONS ===
         function debugImageData() {
             console.log('🐛 === DEBUG IMAGE DATA ===');
@@ -4651,6 +4741,7 @@ function generateMonthlyReport() {
     generateBtn.setAttribute('aria-busy', 'true');
     generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังสร้าง...';
   }
+  var requestToken = ++monthlyReportRequestToken;
 
   var monthName = (typeof MONTHS_TH !== 'undefined' && MONTHS_TH[month - 1]) ? MONTHS_TH[month - 1] : ('เดือน ' + month);
   var reportLabel = selectedTechnician
@@ -4675,6 +4766,7 @@ function generateMonthlyReport() {
 
     google.script.run
       .withSuccessHandler(function(result) {
+        if (requestToken !== monthlyReportRequestToken) return;
         resetGenerateButton();
 
         console.log('✅ Monthly report result:', result);
@@ -4713,6 +4805,7 @@ function generateMonthlyReport() {
         }
       })
       .withFailureHandler(function(error) {
+        if (requestToken !== monthlyReportRequestToken) return;
         resetGenerateButton();
 
         console.error('❌ Monthly report server error:', error);
@@ -4724,7 +4817,7 @@ function generateMonthlyReport() {
       .createMonthlyReportDocument(year, month, selectedTechnician);
 
   } catch (error) {
-    resetGenerateButton();
+    if (requestToken === monthlyReportRequestToken) resetGenerateButton();
 
     console.error('❌ Monthly report client error:', error);
     console.log('🔘 Generate button state after catch:', generateBtn ? generateBtn.disabled : 'no-button');

@@ -1965,6 +1965,8 @@ function renderImagePreview() {
   console.log('[STEP1] handleFormSubmit start');
 
   const submitBtn = document.getElementById('submitBtn');
+  const repairForm = event.currentTarget || document.getElementById('repairForm');
+  if (repairForm && repairForm.dataset.submitting === '1') return;
   const locationSelect = document.getElementById('locationSelect');
   const otherLocation = document.getElementById('otherLocation');
   const locationDetail = document.getElementById('locationDetail');
@@ -2004,6 +2006,7 @@ function renderImagePreview() {
   }
 
   toggleLoading(true);
+  if (repairForm) repairForm.dataset.submitting = '1';
   if (submitBtn) submitBtn.disabled = true;
 
   try {
@@ -2016,6 +2019,7 @@ function renderImagePreview() {
         console.log('[STEP3] submitRepairForm success:', result);
 
         toggleLoading(false);
+        if (repairForm) repairForm.dataset.submitting = '0';
         if (submitBtn) submitBtn.disabled = false;
 
         if (!result || !result.success) {
@@ -2024,6 +2028,17 @@ function renderImagePreview() {
         }
 
         showAlert('success', 'ส่งแจ้งซ่อมเรียบร้อย เลขที่: ' + (result.sequenceNumber || '-'));
+
+        if (result.sequenceNumber && typeof google !== 'undefined' && google.script && google.script.run) {
+          google.script.run
+            .withSuccessHandler(function(workerResult) {
+              console.log('[STEP4] pdfWorker(1) success:', workerResult);
+            })
+            .withFailureHandler(function(workerError) {
+              console.error('[FAIL] pdfWorker(1):', workerError);
+            })
+            .pdfWorker(1);
+        }
 
         document.getElementById('repairForm').reset();
         selectedImages = [];
@@ -2037,6 +2052,7 @@ function renderImagePreview() {
         console.error('[FAIL] submitRepairForm:', error);
 
         toggleLoading(false);
+        if (repairForm) repairForm.dataset.submitting = '0';
         if (submitBtn) submitBtn.disabled = false;
 
         showAlert('error', 'เกิดข้อผิดพลาดในการส่งข้อมูล: ' + (error.message || error));
@@ -2046,6 +2062,7 @@ function renderImagePreview() {
   } catch (error) {
     console.error('[FAIL] handleFormSubmit:', error);
     toggleLoading(false);
+    if (repairForm) repairForm.dataset.submitting = '0';
     if (submitBtn) submitBtn.disabled = false;
     showAlert('error', 'เกิดข้อผิดพลาด: ' + (error.message || error));
   }
